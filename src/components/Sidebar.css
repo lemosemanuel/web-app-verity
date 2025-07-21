@@ -1,0 +1,10 @@
+.sidebar ul { list-style: none; padding: 0; }
+.sidebar li { margin: 18px 0; }
+.sidebar .selected, .sidebar a.selected {
+  font-weight: 700;
+  color: #5e7f00;
+  background: #eaffd1;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+.sidebar a { text-decoration: none; color: inherit; }

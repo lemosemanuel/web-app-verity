@@ -1,0 +1,53 @@
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.12); z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+}
+.scanner-modal-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 34px 32px 30px 32px;
+  box-shadow: 0 8px 36px #c2f4a5aa;
+  max-width: 950px; width: 98vw; min-width: 320px;
+  position: relative;
+}
+.close-btn {
+  position: absolute; top: 18px; right: 28px;
+  font-size: 2rem; background: none; border: none; color: #b1b1b1;
+  cursor: pointer;
+}
+.scanner-title {
+  font-size: 1.22rem; font-weight: 700; color: #384d19; margin-bottom: 8px;
+}
+.scanner-desc { font-size: 0.99rem; color: #8da129; margin-bottom: 24px; }
+.scanner-images-row {
+  display: flex; gap: 28px; flex-wrap: wrap; justify-content: center;
+}
+.scanner-img-wrap { display: flex; flex-direction: column; align-items: center; }
+.scanner-img-border {
+  width: 120px; height: 120px;
+  background: #e8f7ce;
+  border-radius: 10px; border: 2px solid #C3FF5B;
+  position: relative; overflow: hidden;
+  box-shadow: 0 2px 10px #e6f8d6;
+}
+.scanner-img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 10px;
+}
+.scanner-label {
+  font-size: 0.95rem; color: #397608; margin-top: 5px; font-weight: 500;
+  text-align: center; width: 110px;
+}
+.scanner-overlay {
+  position: absolute;
+  left: 0; right: 0; height: 12px;
+  top: 0;
+  background: linear-gradient(180deg, #d7ffa8cc 0%, #c3ff5b88 65%, transparent 100%);
+  animation: scanner-move 1.2s linear infinite;
+  opacity: 0.55;
+  border-radius: 10px;
+}
+@keyframes scanner-move {
+  0% { top: 0; }
+  100% { top: 100px; }
+}
