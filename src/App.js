@@ -12,14 +12,49 @@ function App() {
       <div style={{ display: "flex", minHeight: "100vh", background: "#f4f6fa" }}>
         <Sidebar />
         <main style={{ flex: 1, padding: "40px" }}>
-          <Header />
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+            {/* No Header en Dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/products" element={<ProductTable />} />
-            <Route path="/faqs" element={<div>FAQs page</div>} />
-            <Route path="/support" element={<div>Support page</div>} />
-            <Route path="/settings" element={<div>Settings page</div>} />
+
+            {/* Sí Header en estas páginas */}
+            <Route
+              path="/products"
+              element={
+                <>
+                  <Header />
+                  <ProductTable />
+                </>
+              }
+            />
+            <Route
+              path="/faqs"
+              element={
+                <>
+                  <Header />
+                  <div>FAQs page</div>
+                </>
+              }
+            />
+            <Route
+              path="/support"
+              element={
+                <>
+                  <Header />
+                  <div>Support page</div>
+                </>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <>
+                  <Header />
+                  <div>Settings page</div>
+                </>
+              }
+            />
+            {/* Redirección raíz */}
+            <Route path="/" element={<Navigate to="/dashboard" />} />
           </Routes>
         </main>
       </div>

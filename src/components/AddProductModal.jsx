@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import ScannerModal from "./ScannerModal";
 import VerifyCertificateModal from "./VerifyCertificateModal";
-import "./AddProductModal.css";
 import ErrorModal from "./ErrorModal";
+import "./AddProductModal.css";
 
-export default function AddProductModal({ open, onClose, onProductCreated }) {
+export default function AddProductModal({ open, onClose, onProductCreated, product }) {
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const [assetGroups, setAssetGroups] = useState([]);
@@ -19,10 +19,12 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [certificateData, setCertificateData] = useState(null);
   const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const fileInputs = useRef({});
   const dragImgRef = useRef(null);
   const [draggedOver, setDraggedOver] = useState("");
 
+  // --- Carga de catálogos ---
   useEffect(() => {
     if (open) {
       fetch("http://172.20.10.3:80/api/brands")
@@ -31,10 +33,45 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
       fetch("http://172.20.10.3:80/api/categories")
         .then(r => r.json())
         .then(setCategories);
-      setAssetGroups([]);
-      setForm(f => ({ ...f, images: [] }));
     }
   }, [open]);
+
+  // --- Al abrir, inicializa modo edición o modo crear ---
+  useEffect(() => {
+    if (open && product) {
+      setForm({
+        name: product.name || "",
+        description: product.description || "",
+        price: product.price || "",
+        brand_id: product.brand_id || "",
+        category_id: product.category_id || "",
+        images: Array.isArray(product.images)
+          ? product.images.map(img => ({
+              ...img,
+              preview: img.preview || img.url,
+              url: img.url // aseguramos campo url
+            }))
+          : [],
+      });
+      if (product.category_id) {
+        fetch(`http://172.20.10.3:80/api/category_asset_groups/${product.category_id}`)
+          .then(r => r.json())
+          .then(list => setAssetGroups(list));
+      } else {
+        setAssetGroups([]);
+      }
+    } else if (open && !product) {
+      setForm({
+        name: "",
+        description: "",
+        price: "",
+        brand_id: "",
+        category_id: "",
+        images: []
+      });
+      setAssetGroups([]);
+    }
+  }, [open, product]);
 
   function handleCategoryChange(e) {
     const category_id = e.target.value;
@@ -135,21 +172,45 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
     dragImgRef.current = null;
   }
 
-  function handleSubmit(e) {
+  // ------- ESTA ES LA PARTE QUE CAMBIA PARA CONSERVAR LAS IMÁGENES -------
+  async function handleSubmit(e) {
     e.preventDefault();
-    const cleanImages = form.images.map(img => ({
-      asset_group: img.asset_group,
-      file_b64: img.file_b64,
-      filename: img.filename,
-      preview: img.preview
-    }));
+    if (submitting) return; // anti doble submit
+    setSubmitting(true);
+
+    let mergedImages = assetGroups.map(ag => {
+      const imgNew = form.images.find(img => img.asset_group === ag.name && (img.file_b64 || img.url));
+      if (imgNew && (imgNew.file_b64 || imgNew.url)) {
+        return {
+          asset_group: ag.name,
+          ...(imgNew.file_b64
+            ? { file_b64: imgNew.file_b64, filename: imgNew.filename }
+            : { url: imgNew.url, filename: imgNew.filename }),
+          preview: imgNew.preview
+        };
+      }
+      if (product && Array.isArray(product.images)) {
+        const imgOld = product.images.find(img => img.asset_group === ag.name && img.url);
+        if (imgOld && imgOld.url) {
+          return {
+            asset_group: ag.name,
+            url: imgOld.url,
+            filename: imgOld.filename,
+            preview: imgOld.url
+          };
+        }
+      }
+      return null;
+    }).filter(Boolean);
 
     const minImgs = assetGroups.filter(g => g.is_required).length;
     const imgsPresent = assetGroups.filter(
-      g => form.images.some(img => img.asset_group === g.name)
+      g => mergedImages.some(img => img.asset_group === g.name && (img.file_b64 || img.url))
     ).length;
+
     if (!form.name || !form.brand_id || !form.category_id || imgsPresent < minImgs) {
       alert(`Please fill all fields and upload at least ${minImgs} required images.`);
+      setSubmitting(false);
       return;
     }
 
@@ -157,11 +218,7 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
 
     const predictPayload = {
       brand: brands.find(b => b.id === form.brand_id)?.name || "",
-      images: cleanImages.map(img => ({
-        file_b64: img.file_b64,
-        filename: img.filename,
-        asset_group: img.asset_group
-      })),
+      images: mergedImages,
       user_id: "test-user-id",
       brand_id: form.brand_id,
       category_name: categories.find(c => c.id === form.category_id)?.title || "",
@@ -171,51 +228,62 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
       custom_platform: ""
     };
 
-    fetch("http://172.20.10.3:80/authentication/authentication", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(predictPayload)
-    })
-      .then(r => r.json())
-      .then(res => {
-        setScannerOpen(false);
-        const status = res.status && res.status.toLowerCase();
+    try {
+      // SIEMPRE autenticá antes de guardar
+      const verityRes = await fetch("http://172.20.10.3:80/authentication/authentication", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(predictPayload)
+      }).then(r => r.json());
 
-        if (status === "approved") {
-          setCertificateData(res); // 🔴 Solo muestro el certificado, NO cierro el modal principal!
-        } else {
-          setErrorModalOpen(true); // Error, no cierro nada más.
-        }
+      setScannerOpen(false);
 
-        // Guardar el producto siempre (opcional)
-        const formToSend = {
-          name: form.name.trim(),
-          description: form.description?.trim() || "",
-          price: parseFloat(form.price) || 0,
-          brand_id: form.brand_id,
-          category_id: form.category_id,
-          images: cleanImages,
-          verification_metadata: res,
-          verified_at: new Date().toISOString(),
-          status: status === "approved" ? "VERIFIED" : "FAILED"
-        };
+      const status = verityRes.status && verityRes.status.toLowerCase();
 
-        fetch("http://172.20.10.3:80/api/webapp_products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formToSend)
-        })
-          .then(r => r.json())
-          .then(createdRes => {
-            onProductCreated && onProductCreated(createdRes);
-            // NO reseteo ni cierro modal todavía!
-          });
-      })
-      .catch(err => {
-        setScannerOpen(false);
+      if (status === "approved") {
+        setCertificateData(verityRes);
+      } else {
         setErrorModalOpen(true);
-      });
+      }
+
+      // Guardá el producto
+      const formToSend = {
+        name: form.name.trim(),
+        description: form.description?.trim() || "",
+        price: parseFloat(form.price) || 0,
+        brand_id: form.brand_id,
+        category_id: form.category_id,
+        images: mergedImages,
+        verification_metadata: verityRes,
+        verified_at: new Date().toISOString(),
+        status: "ACTIVE"
+      };
+
+      const fetchOptions = {
+        method: product ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formToSend)
+      };
+
+      const url = product
+        ? `http://172.20.10.3:80/api/webapp_products/${product.id}`
+        : "http://172.20.10.3:80/api/webapp_products";
+
+      await fetch(url, fetchOptions)
+        .then(r => r.json())
+        .then(createdRes => {
+          onProductCreated && onProductCreated(createdRes);
+        });
+
+    } catch (err) {
+      setScannerOpen(false);
+      setErrorModalOpen(true);
+    } finally {
+      setSubmitting(false);
+    }
   }
+
+  // -----------------------------------------------------------------------
 
   // Solo reseteo/cerro TODO cuando el usuario cierra el certificado:
   function handleCertificateClose() {
@@ -234,6 +302,7 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
 
   function handleErrorClose() {
     setErrorModalOpen(false);
+    setSubmitting(false);
     // El modal principal sigue abierto para reintentar.
   }
 
@@ -304,10 +373,10 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
                         onDragLeave={() => onDragLeave(ag.name)}
                         onDrop={e => onDrop(ag.name, e)}
                       >
-                        {imgObj ? (
+                        {imgObj && (imgObj.preview || imgObj.url) ? (
                           <>
                             <img
-                              src={imgObj.preview}
+                              src={imgObj.preview || imgObj.url}
                               alt={ag.name}
                               className="img-main-preview"
                               draggable
@@ -346,6 +415,7 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
                             </label>
                           </>
                         )}
+
                       </div>
                     </div>
                   );
@@ -390,19 +460,31 @@ export default function AddProductModal({ open, onClose, onProductCreated }) {
             </label>
             <button
               className="submit-btn"
-              disabled={scannerOpen}
+              disabled={scannerOpen || submitting}
               style={{ marginTop: 22, width: 320, fontSize: 18, background: "#C3FF5B" }}
               type="submit"
             >
-              {scannerOpen ? "Creating..." : "Submit for authentication"}
+              {scannerOpen || submitting ? "Verifying..." : "Submit for authentication"}
             </button>
           </form>
         </div>
       </div>
-      <ScannerModal open={scannerOpen} images={form.images} />
+      <ScannerModal open={scannerOpen} images={
+        // para mostrar bien las imágenes en el scanner
+        assetGroups.map(ag => {
+          // Buscá la imagen nueva, si no está usá la original
+          const img = form.images.find(img => img.asset_group === ag.name);
+          if (img && img.preview) return { ...img, asset_group: ag.name };
+          if (product && product.images) {
+            const oldImg = product.images.find(img2 => img2.asset_group === ag.name);
+            if (oldImg && oldImg.url) return { ...oldImg, asset_group: ag.name, preview: oldImg.url };
+          }
+          return { asset_group: ag.name };
+        })
+      } />
       <VerifyCertificateModal
         open={!!certificateData}
-        onClose={handleCertificateClose}  // Ahora recién se cierra todo
+        onClose={handleCertificateClose}
         certificateData={certificateData}
       />
       <ErrorModal open={errorModalOpen} onClose={handleErrorClose} />

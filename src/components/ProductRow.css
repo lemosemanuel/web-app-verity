@@ -1,0 +1,76 @@
+/* ProductRow.css */
+
+.product-row {
+  transition: background 0.13s;
+}
+.product-row:hover {
+  background: #f5f9ee;
+}
+
+.product-table-checkbox,
+.product-table-image,
+.product-table-id,
+.product-table-brand,
+.product-table-additional,
+.product-table-status,
+.product-table-certificate {
+  padding: 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.product-additional-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #eee;
+  margin-right: 4px;
+  background: #fff;
+}
+
+.add-photos-btn {
+  width: 48px;
+  height: 48px;
+  border: 2px dashed #ccc;
+  border-radius: 10px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.13s;
+  padding: 0;
+  cursor: pointer;
+  margin-left: 4px;
+}
+.add-photos-btn:hover {
+  background: #f0f5ee;
+}
+.add-photos-btn img {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  object-fit: contain;
+}
+.add-photos-btn span {
+  font-size: 10px;
+  color: #222;
+  font-weight: 400;
+  margin-top: 0px;
+  line-height: 1;
+}
+
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  transition: background 0.13s;
+}
+.download-btn:hover {
+  background: #f2f2f2;
+}

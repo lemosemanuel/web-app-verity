@@ -8,9 +8,12 @@ export default function ProductTable() {
   const [products, setProducts] = useState([]);
   const [checkedRows, setCheckedRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
 
-  // --- Verity Modal State ---
+  // Modal para crear/editar producto
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null); // null = crear nuevo
+
+  // Certificado Verity Modal
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [certificateData, setCertificateData] = useState(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
@@ -34,7 +37,27 @@ export default function ProductTable() {
     );
   }
 
-  function handleProductCreated() { loadProducts(); }
+  function handleCheckAll(e) {
+    setCheckedRows(e.target.checked ? products.map(p => p.id) : []);
+  }
+
+  // Crear producto
+  function handleCreateProduct() {
+    setEditingProduct(null);
+    setModalOpen(true);
+  }
+
+  // Editar producto (al hacer click en AddPhoto)
+  function handleEditProduct(product) {
+    setEditingProduct(product);
+    setModalOpen(true);
+  }
+
+  function handleProductCreated() {
+    loadProducts();
+    setModalOpen(false);
+    setEditingProduct(null);
+  }
 
   // --- VERITY AI: Autenticación y muestra del certificado desde botón general ---
   async function handleVerifyProduct() {
@@ -45,7 +68,7 @@ export default function ProductTable() {
     }
     setVerifyLoading(true);
 
-    // Construye payload para /authentication (ajusta user_id si tienes auth real)
+    // Construye payload para /authentication
     const payload = {
       brand: selectedProduct.brand_name,
       brand_id: selectedProduct.brand_id,
@@ -66,7 +89,6 @@ export default function ProductTable() {
       if (!response.ok) throw new Error("Authentication failed.");
       const result = await response.json();
 
-      // Construye los datos para el modal
       setCertificateData({
         brand: result.brand || selectedProduct.brand_name,
         imageUrl: (result.images && result.images[0]?.url)
@@ -84,7 +106,7 @@ export default function ProductTable() {
     }
   }
 
-  // --- Mostrar certificado desde botón "Ver certificado" de cada fila ---
+  // Mostrar certificado desde botón "Descargar" de cada fila
   function handleViewCertificate(product) {
     setCertificateData({
       brand: product.brand_name,
@@ -95,6 +117,9 @@ export default function ProductTable() {
     setVerifyModalOpen(true);
   }
 
+  // Checkbox general
+  const allChecked = products.length > 0 && checkedRows.length === products.length;
+
   if (loading) return <div className="table-container">Loading products...</div>;
 
   return (
@@ -102,7 +127,7 @@ export default function ProductTable() {
       {/* Crear producto */}
       <button
         className="button-main"
-        onClick={() => setModalOpen(true)}
+        onClick={handleCreateProduct}
         style={{ marginBottom: 20, marginRight: 16 }}
       >
         + Crear producto
@@ -123,29 +148,42 @@ export default function ProductTable() {
         {verifyLoading ? "Verifying..." : "Verify with Verity AI"}
       </button>
 
-      {/* Modales */}
+      {/* Modal para crear/editar */}
       <AddProductModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onProductCreated={handleProductCreated}
+        product={editingProduct}
       />
+
+      {/* Modal certificado */}
       <VerifyCertificateModal
         open={verifyModalOpen}
         onClose={() => setVerifyModalOpen(false)}
         certificateData={certificateData}
       />
 
-      <table className="product-table">
+      <table className="product-table w-full text-sm bg-white rounded-xl overflow-hidden">
         <thead>
-          <tr>
-            <th></th>
-            <th>Image</th>
-            <th>Product</th>
-            <th>Category</th>
-            <th>Brand</th>
-            <th>Verity Result</th>
-            <th>Additional Images</th>
-            <th></th> {/* <-- Nueva columna para "Ver certificado" */}
+          <tr className="bg-gray-100">
+            <th className="px-3 py-2 text-center">
+              <input
+                type="checkbox"
+                checked={allChecked}
+                onChange={handleCheckAll}
+                aria-label="Select all"
+              />
+            </th>
+            <th className="px-3 py-2 text-left">Image</th>
+            <th className="px-3 py-2 text-left">ID</th>
+            <th className="px-3 py-2 text-left">Brand</th>
+            <th className="px-3 py-2 text-center">
+              Additional images <span title="Add extra photos">ℹ️</span>
+            </th>
+            <th className="px-3 py-2 text-center">Verity Result</th>
+            <th className="px-3 py-2 text-center">
+              Verity Certificate <span title="Download certificate">ℹ️</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -155,12 +193,13 @@ export default function ProductTable() {
               product={product}
               checked={checkedRows.includes(product.id)}
               onCheck={handleCheck}
-              onViewCertificate={handleViewCertificate} // <-- ESTA ES LA CLAVE
+              onViewCertificate={handleViewCertificate}
+              onEditProduct={handleEditProduct}  // <-- PASA ESTO
             />
           ))}
         </tbody>
       </table>
-      <div className="pagination">
+      <div className="pagination mt-3">
         <Pagination />
       </div>
     </div>

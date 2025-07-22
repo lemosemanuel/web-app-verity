@@ -7,18 +7,34 @@ export default function VerifyCertificateModal({ open, onClose, certificateData 
 
   if (!open) return null;
 
+  // LOG PARA DEBUG
+  console.log("certificateData", certificateData);
+
+  // Imagen principal
+  let mainImageUrl = "https://assets.highend.app/products/tu-producto.png";
+  if (certificateData && Array.isArray(certificateData.images)) {
+    let mainImg = certificateData.images.find(
+      img =>
+        (img.asset_group || img.type || "").toLowerCase().includes("main") ||
+        (img.asset_group || img.type || "").toLowerCase().includes("principal")
+    );
+    if (!mainImg) mainImg = certificateData.images[0];
+    if (mainImg && (mainImg.url || mainImg.preview)) {
+      mainImageUrl = mainImg.url || mainImg.preview;
+    }
+  }
+
   const {
     brand = "Brand name",
-    imageUrl = "https://assets.highend.app/products/tu-producto.png",
     date,
     authenticStickerUrl = "https://assets.highend.app/products/1753057243-authent.png",
     verityLogoUrl = "https://assets.highend.app/products/1753057075-Verity.png"
   } = certificateData || {};
 
   let formattedDate = "";
-  if (date) {
+  if (date || certificateData?.date_of_authentication) {
     try {
-      const d = new Date(date);
+      const d = new Date(date || certificateData?.date_of_authentication);
       formattedDate =
         d.toLocaleDateString(undefined, {
           day: "2-digit",
@@ -31,7 +47,7 @@ export default function VerifyCertificateModal({ open, onClose, certificateData 
           minute: "2-digit",
         });
     } catch {
-      formattedDate = date;
+      formattedDate = date || certificateData?.date_of_authentication;
     }
   }
 
@@ -73,11 +89,15 @@ export default function VerifyCertificateModal({ open, onClose, certificateData 
           <div className="certificate-row">
             <div className="certificate-img-box">
               <img
-                src={imageUrl}
+                src={mainImageUrl}
                 alt="product"
                 className="certificate-img-main"
                 draggable={false}
                 crossOrigin="anonymous"
+                onError={e => {
+                  e.target.onerror = null;
+                  e.target.src = "https://assets.highend.app/products/tu-producto.png";
+                }}
               />
               <img
                 src={authenticStickerUrl}
