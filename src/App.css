@@ -1,40 +1,46 @@
+/* ===== Global ===== */
+:root {
+  --ctrl-h: 40px;
+  --radius: 7px;
+  --primary-bg: #d8f99b;
+  --primary-bg-hover: #b1e957;
+  --border: 1px solid #e1e1e1;
+  --font-size: 0.95rem;
+}
+
 body {
   margin: 0;
   font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Helvetica Neue', Arial, sans-serif;
   background: #f4f6fa;
 }
 
-/* Sidebar */
+/* ===== Sidebar ===== */
 .sidebar {
-  background: #d8f99b;
+  background: var(--primary-bg);
   width: 250px;
   min-height: 100vh;
   padding: 32px 24px 24px 24px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.07);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
 }
-
 .sidebar .title {
   font-size: 2rem;
   font-weight: bold;
   color: #212121;
   letter-spacing: 0.02em;
 }
-
 .sidebar .subtitle {
   font-size: 0.8rem;
   color: #555;
   margin-top: 6px;
   font-style: italic;
 }
-
 .sidebar nav ul {
   list-style: none;
   margin: 32px 0 0 0;
   padding: 0;
 }
-
 .sidebar nav li {
   margin-bottom: 14px;
   padding: 10px 12px;
@@ -44,83 +50,130 @@ body {
   color: #333;
   transition: background 0.15s;
 }
-
-.sidebar nav li.selected, .sidebar nav li:hover {
+.sidebar nav li.selected,
+.sidebar nav li:hover {
   background: #fff;
   color: #85a300;
   font-weight: bold;
 }
 
-/* Header */
+/* ===== Header (Create + Filters en una fila) ===== */
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   background: #fff;
   margin-bottom: 24px;
-  padding: 24px 32px;
+  padding: 18px 24px;
   border-radius: 12px;
-  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.07);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  gap: 16px;
+}
+.header-inline { flex-wrap: nowrap; }
+
+/* Empuja los filtros a la derecha */
+.filters-inline {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
-.header .button-main {
-  background: #d8f99b;
+/* ===== Controles comunes ===== */
+.ctrl {
+  height: var(--ctrl-h);
+  line-height: var(--ctrl-h);
+  box-sizing: border-box;
+  border-radius: var(--radius);
+  font-size: var(--font-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+}
+
+/* Botón principal */
+.button-main {
+  background: var(--primary-bg);
   color: #222;
-  font-weight: bold;
+  font-weight: 600;
   border: none;
-  border-radius: 7px;
-  padding: 10px 30px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background .2s;
+  /* hereda dimensiones de .ctrl */
+  height: var(--ctrl-h);
+  line-height: var(--ctrl-h);
+  border-radius: var(--radius);
+  padding: 0 30px;
+}
+.button-main:hover { background: var(--primary-bg-hover); }
+
+/* Variantes */
+.button-secondary {
+  background: #f4f4f4;
+  color: #222;
+  border: var(--border);
+  font-weight: 500;
+  height: var(--ctrl-h);
+  line-height: var(--ctrl-h);
+  border-radius: var(--radius);
+  padding: 0 22px;
+  cursor: pointer;
+}
+.button-ghost {
+  background: transparent;
+  color: #444;
+  border: var(--border);
+  font-weight: 400;
+  height: var(--ctrl-h);
+  line-height: var(--ctrl-h);
+  border-radius: var(--radius);
+  padding: 0 18px;
+  cursor: default;
 }
 
-.header .button-main:hover {
-  background: #b1e957;
+/* Inputs / selects */
+.filter-select,
+.filter-input {
+  height: var(--ctrl-h);
+  line-height: var(--ctrl-h);
+  padding: 0 12px;
+  border-radius: var(--radius);
+  border: var(--border);
+  font-size: var(--font-size);
+  background: #fff;
+  color: #333;
 }
 
-.header .filters input,
-.header .filters select,
-.header .filters button {
-  margin-left: 6px;
-  padding: 8px 10px;
-  border-radius: 7px;
-  border: 1px solid #e1e1e1;
-  font-size: 1rem;
-}
-
-/* Table */
+/* ===== Table ===== */
 .table-container {
   background: #fff;
   border-radius: 14px;
   padding: 24px;
-  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.07);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
 }
-
 .product-table {
   width: 100%;
   border-collapse: collapse;
 }
-
-.product-table th, .product-table td {
+.product-table th,
+.product-table td {
   padding: 12px;
   text-align: left;
   font-size: 1rem;
   border-bottom: 1px solid #f2f2f2;
 }
-
 .product-table th {
   color: #666;
   font-weight: 500;
   background: #f7f7f7;
 }
-
 .product-table tr:hover {
   background: #f5f9ee;
 }
-
-.product-table .img-cell {
-  width: 60px;
-}
+.product-table .img-cell { width: 60px; }
 .product-table img {
   width: 42px;
   height: 42px;
@@ -128,7 +181,7 @@ body {
   border-radius: 10px;
 }
 
-/* Status tags */
+/* ===== Status tags ===== */
 .status-tag {
   font-size: 0.8rem;
   padding: 5px 16px;
@@ -163,7 +216,6 @@ body {
   margin-top: 20px;
   justify-content: flex-end;
 }
-
 .pagination button {
   padding: 7px 16px;
   border-radius: 8px;
@@ -173,10 +225,24 @@ body {
   cursor: pointer;
   transition: background 0.15s;
 }
-
 .pagination button.selected,
 .pagination button:hover {
-  background: #d8f99b;
+  background: var(--primary-bg);
   color: #2a4900;
   font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .header-inline {
+    flex-wrap: wrap;
+  }
+  .filters-inline {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+    white-space: normal;
+    overflow-x: visible;
+    gap: 6px;
+  }
 }

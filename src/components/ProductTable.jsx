@@ -9,146 +9,258 @@ export default function ProductTable() {
   const [checkedRows, setCheckedRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal para crear/editar producto
+  // Filtros
+  const [filterVendor, setFilterVendor] = useState("");
+  const [filterResult, setFilterResult] = useState("");
+  const [filterText, setFilterText] = useState("");
+
+  // Modals
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null); // null = crear nuevo
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  // Certificado Verity Modal
-  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
-  const [certificateData, setCertificateData] = useState(null);
-  const [verifyLoading, setVerifyLoading] = useState(false);
+  // Certificado
+  const [certModal, setCertModal] = useState({
+    open: false,
+    product: null,
+    certificateData: null,
+    mainImageUrl: null,
+  });
 
+  // const [verifyLoading, setVerifyLoading] = useState(false);
+
+  // Helpers
+  const getImageSrc = (imgObj) => imgObj?.preview || imgObj?.url || "";
+
+  // Load products
   function loadProducts() {
     setLoading(true);
-    fetch("http://172.20.10.3:80/api/webapp_products")
-      .then(res => res.json())
-      .then(data => {
+    fetch("https://python-services.stage.highend.app/api/webapp_products")
+      .then((res) => res.json())
+      .then((data) => {
         setProducts(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
-  useEffect(() => { loadProducts(); }, []);
+  // Select options
+  const allVendors = Array.from(new Set(products.map((p) => p.brand_name).filter(Boolean))).sort();
 
+  const allResults = Array.from(
+    new Set(
+      products
+        .map((p) => {
+          const v =
+            p.verify_result ||
+            (typeof p.verification_metadata === "object" && p.verification_metadata?.status) ||
+            (typeof p.verification_metadata === "string" &&
+              JSON.parse(p.verification_metadata || "{}")?.status) ||
+            "not_verified";
+          return (v || "").toLowerCase();
+        })
+        .filter(Boolean)
+    )
+  ).sort();
+
+  // Filtered list
+  const filteredProducts = products.filter((product) => {
+    if (filterVendor && product.brand_name !== filterVendor) return false;
+
+    let result =
+      product.verify_result ||
+      (typeof product.verification_metadata === "object" && product.verification_metadata?.status) ||
+      (typeof product.verification_metadata === "string" &&
+        JSON.parse(product.verification_metadata || "{}")?.status) ||
+      "not_verified";
+    result = result?.toLowerCase() || "not_verified";
+    if (filterResult && result !== filterResult) return false;
+
+    if (filterText.trim()) {
+      const txt = filterText.trim().toLowerCase();
+      if (
+        !(
+          (product.name && product.name.toLowerCase().includes(txt)) ||
+          (product.id && (product.id + "").toLowerCase().includes(txt)) ||
+          (product.brand_name && product.brand_name.toLowerCase().includes(txt))
+        )
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Checkboxes
   function handleCheck(id) {
-    setCheckedRows((prev) =>
-      prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]
-    );
+    setCheckedRows((prev) => (prev.includes(id) ? prev.filter((cid) => cid !== id) : [...prev, id]));
   }
-
   function handleCheckAll(e) {
-    setCheckedRows(e.target.checked ? products.map(p => p.id) : []);
+    setCheckedRows(e.target.checked ? filteredProducts.map((p) => p.id) : []);
   }
+  const allChecked = filteredProducts.length > 0 && checkedRows.length === filteredProducts.length;
 
-  // Crear producto
+  // Create / Edit product
   function handleCreateProduct() {
     setEditingProduct(null);
     setModalOpen(true);
   }
-
-  // Editar producto (al hacer click en AddPhoto)
   function handleEditProduct(product) {
     setEditingProduct(product);
     setModalOpen(true);
   }
-
   function handleProductCreated() {
     loadProducts();
     setModalOpen(false);
     setEditingProduct(null);
   }
 
-  // --- VERITY AI: Autenticación y muestra del certificado desde botón general ---
-  async function handleVerifyProduct() {
-    const selectedProduct = products.find(p => checkedRows.includes(p.id));
-    if (!selectedProduct) {
-      alert("Please select a product to verify.");
-      return;
-    }
-    setVerifyLoading(true);
+  // // Verify with Verity
+  // async function handleVerifyProduct() {
+  //   const selectedProduct = filteredProducts.find((p) => checkedRows.includes(p.id));
+  //   if (!selectedProduct) {
+  //     alert("Please select a product to verify.");
+  //     return;
+  //   }
 
-    // Construye payload para /authentication
-    const payload = {
-      brand: selectedProduct.brand_name,
-      brand_id: selectedProduct.brand_id,
-      user_id: "USER-123456",
-      images: (selectedProduct.images || []).map(img => ({
-        url: img.url
-      })),
-      category_name: selectedProduct.category_title,
-      category_id: selectedProduct.category_id
+  //   setVerifyLoading(true);
+
+  //   const payload = {
+  //     brand: selectedProduct.brand_name,
+  //     brand_id: selectedProduct.brand_id,
+  //     user_id: "USER-123456",
+  //     images: (selectedProduct.images || []).map((img) => ({ url: img.url })),
+  //     category_name: selectedProduct.category_title,
+  //     category_id: selectedProduct.category_id,
+  //   };
+
+  //   try {
+  //     const response = await fetch(
+  //       "https://python-services.stage.highend.app/authentication/authentication",
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify(payload),
+  //       }
+  //     );
+  //     if (!response.ok) throw new Error("Authentication failed.");
+  //     const result = await response.json();
+
+  //     const certData = {
+  //       ...result,
+  //       brand: result.brand || selectedProduct.brand_name,
+  //       images: result.images || selectedProduct.images || [],
+  //       date_of_authentication: result.date_of_authentication,
+  //       certificate_url: result.certificate_url,
+  //       qr_base64: result.qr_base64,
+  //     };
+
+  //     setCertModal({
+  //       open: true,
+  //       product: selectedProduct,
+  //       certificateData: certData,
+  //       mainImageUrl: getImageSrc(selectedProduct.images?.[0]),
+  //     });
+  //   } catch (err) {
+  //     alert("Failed to verify product: " + err.message);
+  //   } finally {
+  //     setVerifyLoading(false);
+  //   }
+  // }
+
+  // View certificate (row icon)
+  function handleViewCertificate(product, mainImageUrlFromRow) {
+    let vMeta = product.verification_metadata;
+    if (typeof vMeta === "string") {
+      try {
+        vMeta = JSON.parse(vMeta);
+      } catch {
+        vMeta = {};
+      }
+    }
+
+    const certData = {
+      ...vMeta,
+      brand: product.brand_name,
+      images: product.images || [],
+      date_of_authentication: product.verified_at,
+      certificate_url: product.certificate_url,
+      qr_base64: product.qr_base64,
     };
 
-    try {
-      const response = await fetch("http://172.20.10.3:80/authentication/authentication", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) throw new Error("Authentication failed.");
-      const result = await response.json();
-
-      setCertificateData({
-        brand: result.brand || selectedProduct.brand_name,
-        imageUrl: (result.images && result.images[0]?.url)
-          || selectedProduct.images[0]?.url
-          || "",
-        date: result.date_of_authentication
-          || new Date().toLocaleDateString(),
-        certificateUrl: result.certificate_url || result.qr_base64 || "#"
-      });
-      setVerifyModalOpen(true);
-    } catch (err) {
-      alert("Failed to verify product: " + err.message);
-    } finally {
-      setVerifyLoading(false);
-    }
-  }
-
-  // Mostrar certificado desde botón "Descargar" de cada fila
-  function handleViewCertificate(product) {
-    setCertificateData({
-      brand: product.brand_name,
-      imageUrl: (product.images && product.images[0]?.url) || "",
-      date: product.verified_at || new Date().toLocaleDateString(),
-      certificateUrl: product.certificate_url || product.qr_base64 || "#"
+    setCertModal({
+      open: true,
+      product,
+      certificateData: certData,
+      mainImageUrl: mainImageUrlFromRow || getImageSrc(product.images?.[0]),
     });
-    setVerifyModalOpen(true);
   }
 
-  // Checkbox general
-  const allChecked = products.length > 0 && checkedRows.length === products.length;
+  function handleCertificateClose() {
+    setCertModal({ open: false, product: null, certificateData: null, mainImageUrl: null });
+  }
 
   if (loading) return <div className="table-container">Loading products...</div>;
 
   return (
     <div className="table-container">
-      {/* Crear producto */}
-      <button
-        className="button-main"
-        onClick={handleCreateProduct}
-        style={{ marginBottom: 20, marginRight: 16 }}
-      >
-        + Crear producto
-      </button>
+      {/* HEADER */}
+      <div className="header header-inline">
+        <button className="button-main" onClick={handleCreateProduct}>
+          + Create product
+        </button>
 
-      {/* Verificar producto (Verity) */}
-      <button
-        className="button-main"
-        onClick={handleVerifyProduct}
-        disabled={verifyLoading}
-        style={{
-          marginBottom: 20,
-          background: "#C3FF5B",
-          color: "#333",
-          fontWeight: 700
-        }}
-      >
-        {verifyLoading ? "Verifying..." : "Verify with Verity AI"}
-      </button>
+        <div className="filters-inline">
+          <button className="button-ghost" tabIndex={-1}>Filter by</button>
 
-      {/* Modal para crear/editar */}
+          <select
+            className="filter-select"
+            value={filterVendor}
+            onChange={(e) => setFilterVendor(e.target.value)}
+          >
+            <option value="">Vendor</option>
+            {allVendors.map((vendor) => (
+              <option key={vendor} value={vendor}>{vendor}</option>
+            ))}
+          </select>
+
+          <select
+            className="filter-select"
+            value={filterResult}
+            onChange={(e) => setFilterResult(e.target.value)}
+          >
+            <option value="">Verity Result</option>
+            {allResults.map((res) => (
+              <option key={res} value={res}>{res.charAt(0).toUpperCase() + res.slice(1)}</option>
+            ))}
+          </select>
+
+          <input
+            className="filter-input"
+            type="text"
+            placeholder="Search by product"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+          />
+
+          <button
+            className="button-secondary"
+            onClick={() => {
+              setFilterVendor("");
+              setFilterResult("");
+              setFilterText("");
+            }}
+          >
+            Reset filters
+          </button>
+        </div>
+      </div>
+
+
+      {/* Modals */}
       <AddProductModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -156,17 +268,19 @@ export default function ProductTable() {
         product={editingProduct}
       />
 
-      {/* Modal certificado */}
       <VerifyCertificateModal
-        open={verifyModalOpen}
-        onClose={() => setVerifyModalOpen(false)}
-        certificateData={certificateData}
+        open={certModal.open}
+        product={certModal.product}
+        certificateData={certModal.certificateData}
+        mainImageUrl={certModal.mainImageUrl}
+        onClose={handleCertificateClose}
       />
 
-      <table className="product-table w-full text-sm bg-white rounded-xl overflow-hidden">
+      {/* Tabla */}
+      <table className="product-table">
         <thead>
-          <tr className="bg-gray-100">
-            <th className="px-3 py-2 text-center">
+          <tr>
+            <th>
               <input
                 type="checkbox"
                 checked={allChecked}
@@ -174,32 +288,34 @@ export default function ProductTable() {
                 aria-label="Select all"
               />
             </th>
-            <th className="px-3 py-2 text-left">Image</th>
-            <th className="px-3 py-2 text-left">ID</th>
-            <th className="px-3 py-2 text-left">Brand</th>
-            <th className="px-3 py-2 text-center">
+            <th>Image</th>
+            <th>ID</th>
+            <th>Brand</th>
+            <th>
               Additional images <span title="Add extra photos">ℹ️</span>
             </th>
-            <th className="px-3 py-2 text-center">Verity Result</th>
-            <th className="px-3 py-2 text-center">
-              Verity Certificate <span title="Download certificate">ℹ️</span>
+            <th>Verity Result</th>
+            <th>
+              Verity Certificate <span title="Show certificate">ℹ️</span>
             </th>
           </tr>
         </thead>
+
         <tbody>
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <ProductRow
               key={product.id}
               product={product}
               checked={checkedRows.includes(product.id)}
               onCheck={handleCheck}
               onViewCertificate={handleViewCertificate}
-              onEditProduct={handleEditProduct}  // <-- PASA ESTO
+              onEditProduct={handleEditProduct}
             />
           ))}
         </tbody>
       </table>
-      <div className="pagination mt-3">
+
+      <div className="pagination">
         <Pagination />
       </div>
     </div>

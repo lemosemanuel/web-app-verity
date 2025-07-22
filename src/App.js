@@ -21,7 +21,7 @@ function App() {
               path="/products"
               element={
                 <>
-                  <Header />
+                  {/* <Header /> */}
                   <ProductTable />
                 </>
               }

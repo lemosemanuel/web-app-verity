@@ -1,3 +1,4 @@
+// AddProductModal.jsx
 import React, { useState, useEffect, useRef } from "react";
 import ScannerModal from "./ScannerModal";
 import VerifyCertificateModal from "./VerifyCertificateModal";
@@ -14,31 +15,36 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
     price: "",
     brand_id: "",
     category_id: "",
-    images: []
+    images: [],
   });
+
   const [scannerOpen, setScannerOpen] = useState(false);
   const [certificateData, setCertificateData] = useState(null);
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [createdProduct, setCreatedProduct] = useState(null); // ← NUEVO
+
   const fileInputs = useRef({});
   const dragImgRef = useRef(null);
   const [draggedOver, setDraggedOver] = useState("");
 
-  // --- Carga de catálogos ---
+  // --- Catálogos (brands, categories) ---
   useEffect(() => {
     if (open) {
-      fetch("http://172.20.10.3:80/api/brands")
-        .then(r => r.json())
+      fetch("https://python-services.stage.highend.app/api/brands")
+        .then((r) => r.json())
         .then(setBrands);
-      fetch("http://172.20.10.3:80/api/categories")
-        .then(r => r.json())
+      fetch("https://python-services.stage.highend.app/api/categories")
+        .then((r) => r.json())
         .then(setCategories);
     }
   }, [open]);
 
-  // --- Al abrir, inicializa modo edición o modo crear ---
+  // --- Inicializar formulario en modo edición/creación ---
   useEffect(() => {
-    if (open && product) {
+    if (!open) return;
+
+    if (product) {
       setForm({
         name: product.name || "",
         description: product.description || "",
@@ -46,28 +52,30 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
         brand_id: product.brand_id || "",
         category_id: product.category_id || "",
         images: Array.isArray(product.images)
-          ? product.images.map(img => ({
+          ? product.images.map((img) => ({
               ...img,
               preview: img.preview || img.url,
-              url: img.url // aseguramos campo url
+              url: img.url,
             }))
           : [],
       });
+
       if (product.category_id) {
-        fetch(`http://172.20.10.3:80/api/category_asset_groups/${product.category_id}`)
-          .then(r => r.json())
-          .then(list => setAssetGroups(list));
+        fetch(`https://python-services.stage.highend.app/api/category_asset_groups/${product.category_id}`)
+          .then((r) => r.json())
+          .then((list) => setAssetGroups(list));
       } else {
         setAssetGroups([]);
       }
-    } else if (open && !product) {
+    } else {
+      // crear
       setForm({
         name: "",
         description: "",
         price: "",
         brand_id: "",
         category_id: "",
-        images: []
+        images: [],
       });
       setAssetGroups([]);
     }
@@ -75,18 +83,20 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
 
   function handleCategoryChange(e) {
     const category_id = e.target.value;
-    setForm(f => ({ ...f, category_id, images: [] }));
+    setForm((f) => ({ ...f, category_id, images: [] }));
+
     if (!category_id) {
       setAssetGroups([]);
       return;
     }
-    fetch(`http://172.20.10.3:80/api/category_asset_groups/${category_id}`)
-      .then(r => r.json())
-      .then(list => setAssetGroups(list));
+
+    fetch(`https://python-services.stage.highend.app/api/category_asset_groups/${category_id}`)
+      .then((r) => r.json())
+      .then((list) => setAssetGroups(list));
   }
 
   function handleChange(e) {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   }
 
   function handleImageChange(asset_group, e) {
@@ -94,15 +104,15 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      setForm(f => {
+      setForm((f) => {
         const images = [
-          ...f.images.filter(img => img.asset_group !== asset_group),
+          ...f.images.filter((img) => img.asset_group !== asset_group),
           {
             asset_group,
             file_b64: reader.result.split(",")[1],
             filename: file.name,
-            preview: reader.result
-          }
+            preview: reader.result,
+          },
         ];
         return { ...f, images };
       });
@@ -112,9 +122,9 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
   }
 
   function handleRemoveImg(asset_group) {
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
-      images: f.images.filter(img => img.asset_group !== asset_group)
+      images: f.images.filter((img) => img.asset_group !== asset_group),
     }));
   }
 
@@ -125,12 +135,11 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
     setDraggedOver(asset_group);
   }
   function onDragLeave(asset_group) {
-    setDraggedOver(prev => (prev === asset_group ? "" : prev));
+    setDraggedOver((prev) => (prev === asset_group ? "" : prev));
   }
   function onDragOver(e) {
     e.preventDefault();
-    e.dataTransfer.dropEffect =
-      e.dataTransfer.files && e.dataTransfer.files.length ? "copy" : "move";
+    e.dataTransfer.dropEffect = e.dataTransfer.files && e.dataTransfer.files.length ? "copy" : "move";
   }
   function onDrop(asset_group, e) {
     e.preventDefault();
@@ -139,73 +148,76 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
       const file = e.dataTransfer.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setForm(f => {
+        setForm((f) => {
           const images = [
-            ...f.images.filter(img => img.asset_group !== asset_group),
+            ...f.images.filter((img) => img.asset_group !== asset_group),
             {
               asset_group,
               file_b64: reader.result.split(",")[1],
               filename: file.name,
-              preview: reader.result
-            }
+              preview: reader.result,
+            },
           ];
           return { ...f, images };
         });
       };
       reader.readAsDataURL(file);
     } else if (dragImgRef.current && dragImgRef.current !== asset_group) {
-      setForm(f => {
-        const draggedImg = f.images.find(img => img.asset_group === dragImgRef.current);
+      setForm((f) => {
+        const draggedImg = f.images.find((img) => img.asset_group === dragImgRef.current);
         if (!draggedImg) return f;
         const filtered = f.images.filter(
-          img => img.asset_group !== dragImgRef.current && img.asset_group !== asset_group
+          (img) => img.asset_group !== dragImgRef.current && img.asset_group !== asset_group
         );
         return {
           ...f,
-          images: [
-            ...filtered,
-            { ...draggedImg, asset_group: asset_group }
-          ]
+          images: [...filtered, { ...draggedImg, asset_group }],
         };
       });
     }
     dragImgRef.current = null;
   }
 
-  // ------- ESTA ES LA PARTE QUE CAMBIA PARA CONSERVAR LAS IMÁGENES -------
+  // -----------------------------------------------------------------------
+  // SUBMIT con verificación primero y guardado, pero sin cerrar el modal
+  // -----------------------------------------------------------------------
   async function handleSubmit(e) {
     e.preventDefault();
-    if (submitting) return; // anti doble submit
+    if (submitting) return;
     setSubmitting(true);
 
-    let mergedImages = assetGroups.map(ag => {
-      const imgNew = form.images.find(img => img.asset_group === ag.name && (img.file_b64 || img.url));
-      if (imgNew && (imgNew.file_b64 || imgNew.url)) {
-        return {
-          asset_group: ag.name,
-          ...(imgNew.file_b64
-            ? { file_b64: imgNew.file_b64, filename: imgNew.filename }
-            : { url: imgNew.url, filename: imgNew.filename }),
-          preview: imgNew.preview
-        };
-      }
-      if (product && Array.isArray(product.images)) {
-        const imgOld = product.images.find(img => img.asset_group === ag.name && img.url);
-        if (imgOld && imgOld.url) {
+    // Merge imágenes nuevas + existentes
+    const mergedImages = assetGroups
+      .map((ag) => {
+        const imgNew = form.images.find((img) => img.asset_group === ag.name && (img.file_b64 || img.url));
+        if (imgNew && (imgNew.file_b64 || imgNew.url)) {
           return {
             asset_group: ag.name,
-            url: imgOld.url,
-            filename: imgOld.filename,
-            preview: imgOld.url
+            ...(imgNew.file_b64
+              ? { file_b64: imgNew.file_b64, filename: imgNew.filename }
+              : { url: imgNew.url, filename: imgNew.filename }),
+            preview: imgNew.preview,
           };
         }
-      }
-      return null;
-    }).filter(Boolean);
+        if (product && Array.isArray(product.images)) {
+          const imgOld = product.images.find((img) => img.asset_group === ag.name && img.url);
+          if (imgOld && imgOld.url) {
+            return {
+              asset_group: ag.name,
+              url: imgOld.url,
+              filename: imgOld.filename,
+              preview: imgOld.url,
+            };
+          }
+        }
+        return null;
+      })
+      .filter(Boolean);
 
-    const minImgs = assetGroups.filter(g => g.is_required).length;
-    const imgsPresent = assetGroups.filter(
-      g => mergedImages.some(img => img.asset_group === g.name && (img.file_b64 || img.url))
+    // Validaciones mínimas
+    const minImgs = assetGroups.filter((g) => g.is_required).length;
+    const imgsPresent = assetGroups.filter((g) =>
+      mergedImages.some((img) => img.asset_group === g.name && (img.file_b64 || img.url))
     ).length;
 
     if (!form.name || !form.brand_id || !form.category_id || imgsPresent < minImgs) {
@@ -217,24 +229,24 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
     setScannerOpen(true);
 
     const predictPayload = {
-      brand: brands.find(b => b.id === form.brand_id)?.name || "",
+      brand: brands.find((b) => b.id === form.brand_id)?.name || "",
       images: mergedImages,
       user_id: "test-user-id",
       brand_id: form.brand_id,
-      category_name: categories.find(c => c.id === form.category_id)?.title || "",
+      category_name: categories.find((c) => c.id === form.category_id)?.title || "",
       category_id: form.category_id,
       buyer_seller: "buyer",
       platforms: [],
-      custom_platform: ""
+      custom_platform: "",
     };
 
     try {
-      // SIEMPRE autenticá antes de guardar
-      const verityRes = await fetch("http://172.20.10.3:80/authentication/authentication", {
+      // 1) Autenticación
+      const verityRes = await fetch("https://python-services.stage.highend.app/authentication/authentication", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(predictPayload)
-      }).then(r => r.json());
+        body: JSON.stringify(predictPayload),
+      }).then((r) => r.json());
 
       setScannerOpen(false);
 
@@ -246,7 +258,7 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
         setErrorModalOpen(true);
       }
 
-      // Guardá el producto
+      // 2) Guardar producto (NO cerramos todavía)
       const formToSend = {
         name: form.name.trim(),
         description: form.description?.trim() || "",
@@ -256,26 +268,24 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
         images: mergedImages,
         verification_metadata: verityRes,
         verified_at: new Date().toISOString(),
-        status: "ACTIVE"
+        status: "ACTIVE",
       };
 
       const fetchOptions = {
         method: product ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formToSend)
+        body: JSON.stringify(formToSend),
       };
 
       const url = product
-        ? `http://172.20.10.3:80/api/webapp_products/${product.id}`
-        : "http://172.20.10.3:80/api/webapp_products";
+        ? `https://python-services.stage.highend.app/api/webapp_products/${product.id}`
+        : "https://python-services.stage.highend.app/api/webapp_products";
 
-      await fetch(url, fetchOptions)
-        .then(r => r.json())
-        .then(createdRes => {
-          onProductCreated && onProductCreated(createdRes);
-        });
+      const createdRes = await fetch(url, fetchOptions).then((r) => r.json());
+      setCreatedProduct(createdRes); // ← guardamos y disparamos el callback al cerrar el certificado
 
     } catch (err) {
+      console.error(err);
       setScannerOpen(false);
       setErrorModalOpen(true);
     } finally {
@@ -284,26 +294,34 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
   }
 
   // -----------------------------------------------------------------------
-
-  // Solo reseteo/cerro TODO cuando el usuario cierra el certificado:
+  // Cerrar certificado => recién acá notificamos al padre y reseteamos
+  // -----------------------------------------------------------------------
   function handleCertificateClose() {
+    if (createdProduct && onProductCreated) {
+      onProductCreated(createdProduct);
+    }
+
     setCertificateData(null);
+    setCreatedProduct(null);
+
+    // Reseteo del form solo si era creación. En edición, quizá quieras mantener datos.
     setForm({
       name: "",
       description: "",
       price: "",
       brand_id: "",
       category_id: "",
-      images: []
+      images: [],
     });
     setAssetGroups([]);
-    onClose();
+
+    onClose?.();
   }
 
   function handleErrorClose() {
     setErrorModalOpen(false);
     setSubmitting(false);
-    // El modal principal sigue abierto para reintentar.
+    // Se queda abierto para reintentar
   }
 
   if (!open) return null;
@@ -312,27 +330,29 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
     <>
       <div className="modal-overlay">
         <div className="modal-card">
-          <button className="close-btn" onClick={onClose}>×</button>
+          <button className="close-btn" onClick={onClose}>
+            ×
+          </button>
+
           <h2 className="modal-title">Step 1: Upload Images</h2>
           <div style={{ fontSize: 18, marginBottom: 10 }}>
             Take clear photos as requested for this category
           </div>
+
           <form onSubmit={handleSubmit} autoComplete="off" style={{ marginTop: 12 }}>
             <div className="row-group" style={{ marginBottom: 14 }}>
               <label style={{ flex: 1 }}>
                 Brand
-                <select
-                  name="brand_id"
-                  value={form.brand_id}
-                  onChange={handleChange}
-                  required
-                >
+                <select name="brand_id" value={form.brand_id} onChange={handleChange} required>
                   <option value="">Select brand</option>
-                  {brands.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
                   ))}
                 </select>
               </label>
+
               <label style={{ flex: 1 }}>
                 Category
                 <select
@@ -342,22 +362,22 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                   required
                 >
                   <option value="">Select category</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
                   ))}
                 </select>
               </label>
             </div>
+
             {assetGroups.length > 0 && (
               <div className="img-group-grid">
-                {assetGroups.map(ag => {
-                  const imgObj = form.images.find(img => img.asset_group === ag.name);
+                {assetGroups.map((ag) => {
+                  const imgObj = form.images.find((img) => img.asset_group === ag.name);
                   return (
                     <div
-                      className={
-                        "img-card" +
-                        (draggedOver === ag.name ? " img-card-highlight" : "")
-                      }
+                      className={"img-card" + (draggedOver === ag.name ? " img-card-highlight" : "")}
                       key={ag.id}
                     >
                       <div className="img-label-asset">
@@ -366,12 +386,13 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                           <span style={{ color: "#f66", fontWeight: 700 }}> *</span>
                         )}
                       </div>
+
                       <div
                         className="img-card-imgbox"
                         onDragOver={onDragOver}
                         onDragEnter={() => onDragEnter(ag.name)}
                         onDragLeave={() => onDragLeave(ag.name)}
-                        onDrop={e => onDrop(ag.name, e)}
+                        onDrop={(e) => onDrop(ag.name, e)}
                       >
                         {imgObj && (imgObj.preview || imgObj.url) ? (
                           <>
@@ -394,7 +415,7 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                                   fontSize: "1.1rem",
                                   color: "#ee3939",
                                   display: "inline-block",
-                                  lineHeight: "18px"
+                                  lineHeight: "18px",
                                 }}
                               >
                                 ×
@@ -408,20 +429,20 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                               <input
                                 type="file"
                                 accept="image/*"
-                                ref={el => (fileInputs.current[ag.name] = el)}
+                                ref={(el) => (fileInputs.current[ag.name] = el)}
                                 style={{ display: "none" }}
-                                onChange={e => handleImageChange(ag.name, e)}
+                                onChange={(e) => handleImageChange(ag.name, e)}
                               />
                             </label>
                           </>
                         )}
-
                       </div>
                     </div>
                   );
                 })}
               </div>
             )}
+
             <label>
               Product name
               <input
@@ -433,6 +454,7 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                 placeholder="Enter product name"
               />
             </label>
+
             <label>
               Description
               <textarea
@@ -444,6 +466,7 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                 placeholder="Type a description (optional)"
               />
             </label>
+
             <label>
               Price
               <input
@@ -458,6 +481,7 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
                 placeholder="0.00"
               />
             </label>
+
             <button
               className="submit-btn"
               disabled={scannerOpen || submitting}
@@ -469,24 +493,32 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
           </form>
         </div>
       </div>
-      <ScannerModal open={scannerOpen} images={
-        // para mostrar bien las imágenes en el scanner
-        assetGroups.map(ag => {
-          // Buscá la imagen nueva, si no está usá la original
-          const img = form.images.find(img => img.asset_group === ag.name);
+
+      {/* Scanner */}
+      <ScannerModal
+        open={scannerOpen}
+        images={assetGroups.map((ag) => {
+          const img = form.images.find((img) => img.asset_group === ag.name);
           if (img && img.preview) return { ...img, asset_group: ag.name };
           if (product && product.images) {
-            const oldImg = product.images.find(img2 => img2.asset_group === ag.name);
-            if (oldImg && oldImg.url) return { ...oldImg, asset_group: ag.name, preview: oldImg.url };
+            const oldImg = product.images.find((img2) => img2.asset_group === ag.name);
+            if (oldImg && oldImg.url)
+              return { ...oldImg, asset_group: ag.name, preview: oldImg.url };
           }
           return { asset_group: ag.name };
-        })
-      } />
+        })}
+      />
+
+      {/* Certificado */}
       <VerifyCertificateModal
         open={!!certificateData}
-        onClose={handleCertificateClose}
         certificateData={certificateData}
+        product={createdProduct || product}  // usa el recién creado o el editado
+        onClose={handleCertificateClose}
+        onFinish={handleCertificateClose}    // opcional si quieres disparar al cerrar desde dentro
       />
+
+      {/* Error */}
       <ErrorModal open={errorModalOpen} onClose={handleErrorClose} />
     </>
   );

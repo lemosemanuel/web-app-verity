@@ -2,111 +2,115 @@ import React, { useRef } from "react";
 import html2canvas from "html2canvas";
 import "./VerifyCertificateModal.css";
 
-export default function VerifyCertificateModal({ open, onClose, certificateData }) {
-  const certificateRef = useRef(null);
+const NO_IMG =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMzAwJyBoZWlnaHQ9JzMwMCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nMzAwJyBoZWlnaHQ9JzMwMCcgZmlsbD0nI2Y1ZjVmNScvPjx0ZXh0IHg9JzUwJScgeT0nNTAlJyBkeT0nLjMnIGZvbnQtc2l6ZT0nMjAnIGZpbGw9JyNiYmInPk5vIEltZzwvdGV4dD48L3N2Zz4=";
 
+const getSrc = (img) => img?.preview || img?.url || "";
+
+const toProxy = (url) => {
+  if (!url || url.startsWith("data:")) return url || NO_IMG;
+  // Solo el pathname para que coincida con pathRewrite
+  try {
+    const u = new URL(url);
+    return `/img-proxy${u.pathname}`;
+  } catch {
+    // si falla el new URL (string raro), lo pasamos entero
+    return `/img-proxy${url.replace(/^https?:\/\/[^/]+/, "")}`;
+  }
+};
+
+export default function VerifyCertificateModal({
+  open,
+  onClose,
+  certificateData,
+  product,
+  mainImageUrl: mainImgFromRow,
+}) {
+  const certificateRef = useRef(null);
   if (!open) return null;
 
-  // LOG PARA DEBUG
-  console.log("certificateData", certificateData);
+  // Imagen final (sin base64)
+  const fallback =
+    getSrc(product?.images?.[0]) ||
+    getSrc(certificateData?.images?.[0]) ||
+    NO_IMG;
 
-  // Imagen principal
-  let mainImageUrl = "https://assets.highend.app/products/tu-producto.png";
-  if (certificateData && Array.isArray(certificateData.images)) {
-    let mainImg = certificateData.images.find(
-      img =>
-        (img.asset_group || img.type || "").toLowerCase().includes("main") ||
-        (img.asset_group || img.type || "").toLowerCase().includes("principal")
-    );
-    if (!mainImg) mainImg = certificateData.images[0];
-    if (mainImg && (mainImg.url || mainImg.preview)) {
-      mainImageUrl = mainImg.url || mainImg.preview;
-    }
-  }
+  const rawImg = mainImgFromRow || fallback;
+  const proxiedImg = toProxy(rawImg);
 
   const {
-    brand = "Brand name",
-    date,
+    brand = product?.brand_name || "Brand name",
     authenticStickerUrl = "https://assets.highend.app/products/1753057243-authent.png",
-    verityLogoUrl = "https://assets.highend.app/products/1753057075-Verity.png"
+    verityLogoUrl = "https://assets.highend.app/products/1753057075-Verity.png",
+    date,
+    date_of_authentication,
   } = certificateData || {};
 
+  const rawDate = date || date_of_authentication;
   let formattedDate = "";
-  if (date || certificateData?.date_of_authentication) {
+  if (rawDate) {
     try {
-      const d = new Date(date || certificateData?.date_of_authentication);
+      const d = new Date(rawDate);
       formattedDate =
-        d.toLocaleDateString(undefined, {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }) +
+        d.toLocaleDateString(undefined, { day: "2-digit", month: "2-digit", year: "numeric" }) +
         " " +
-        d.toLocaleTimeString(undefined, {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
     } catch {
-      formattedDate = date || certificateData?.date_of_authentication;
+      formattedDate = rawDate;
     }
   }
 
   async function handleDownload() {
-    if (certificateRef.current) {
-      // Espera a que las imágenes estén cargadas
-      const imgs = certificateRef.current.querySelectorAll("img");
-      await Promise.all(
-        Array.from(imgs).map((img) =>
-          img.complete && img.naturalHeight !== 0
-            ? Promise.resolve()
-            : new Promise((resolve) => {
-                img.onload = img.onerror = resolve;
-              })
-        )
-      );
+    if (!certificateRef.current) return;
 
-      const canvas = await html2canvas(certificateRef.current, {
-        useCORS: true,
-        backgroundColor: "#fff",
-        scale: window.devicePixelRatio || 2,
-      });
-      const url = canvas.toDataURL("image/png");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `certificate_${brand.replace(/\s/g, "_")}_${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }
+    // aseguramos crossOrigin en todas las imgs
+    certificateRef.current.querySelectorAll("img").forEach((img) => {
+      img.setAttribute("crossorigin", "anonymous");
+    });
+
+    const canvas = await html2canvas(certificateRef.current, {
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#fff",
+      scale: window.devicePixelRatio || 2,
+      logging: false,
+    });
+
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = `certificate_${(brand || "brand").replace(/\s/g, "_")}_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   return (
     <div className="certificate-modal-overlay">
       <div className="certificate-card" ref={certificateRef}>
         <button className="certificate-close-btn" onClick={onClose}>×</button>
+
         <div className="certificate-content">
           <h1 className="certificate-main-title">Certificate Of Authenticity</h1>
+
           <div className="certificate-row">
             <div className="certificate-img-box">
               <img
-                src={mainImageUrl}
+                src={proxiedImg}
                 alt="product"
                 className="certificate-img-main"
                 draggable={false}
                 crossOrigin="anonymous"
-                onError={e => {
-                  e.target.onerror = null;
-                  e.target.src = "https://assets.highend.app/products/tu-producto.png";
-                }}
+                onError={(e) => (e.currentTarget.src = NO_IMG)}
               />
               <img
-                src={authenticStickerUrl}
+                src={toProxy(authenticStickerUrl)}
                 alt="authentic"
                 className="certificate-authentic-sticker"
                 draggable={false}
                 crossOrigin="anonymous"
               />
             </div>
+
             <div className="certificate-meta-box">
               <div className="certificate-meta-field">
                 <span className="certificate-meta-label">Date:</span>
@@ -118,7 +122,7 @@ export default function VerifyCertificateModal({ open, onClose, certificateData 
               </div>
               <div className="certificate-verity-logo-box">
                 <img
-                  src={verityLogoUrl}
+                  src={toProxy(verityLogoUrl)}
                   alt="Verity AI"
                   className="certificate-verity-logo"
                   draggable={false}
@@ -127,6 +131,7 @@ export default function VerifyCertificateModal({ open, onClose, certificateData 
               </div>
             </div>
           </div>
+
           <div className="certificate-description">
             <div className="certificate-desc-text">
               This item has been deemed<br />
@@ -135,9 +140,11 @@ export default function VerifyCertificateModal({ open, onClose, certificateData 
               guarantee for this certificate.
             </div>
           </div>
+
           <div className="certificate-fineprint">
-            VerityAI is not affiliated with any of the brands authenticated. VerityAI's authentication service is based solely on VerityAI's authentication algorithm, and the data it relies upon is not provided by any of the brands Verity AI authenticates. The brands authenticated are not responsible or bound by any of VerityAI's findings.
+            VerityAI is not affiliated with any of the brands authenticated...
           </div>
+
           <button className="certificate-download-btn" onClick={handleDownload}>
             <span role="img" aria-label="download">⬇️</span> Download Certificate
           </button>

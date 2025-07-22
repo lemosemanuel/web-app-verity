@@ -10,7 +10,7 @@ const PURPLE = "#B6A7F5";
 const BLACK = "#111";
 
 // Si usás variables de entorno (.env), poné REACT_APP_API_URL=http://localhost:5000/api
-const API = "http://172.20.10.3:80/api";
+const API = "https://python-services.stage.highend.app/api";
 
 export default function Dashboard() {
   const [kpis, setKpis] = useState({});

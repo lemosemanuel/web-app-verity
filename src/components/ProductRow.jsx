@@ -2,19 +2,32 @@ import React from "react";
 import StatusTag from "./StatusTag";
 import downloadIcon from "./download.png";
 import addPhotoIcon from "./image-upload.png";
-import './ProductRow.css';
+import "./ProductRow.css";
 
 function getImageSrc(imgObj) {
-  if (imgObj?.preview) return imgObj.preview;
-  return imgObj?.url;
+  return imgObj?.preview || imgObj?.url || "";
+}
+
+function pickMainImage(imagesArr = []) {
+  if (!Array.isArray(imagesArr) || !imagesArr.length) return null;
+  return (
+    imagesArr.find(img =>
+      /(main|principal|cover|primary)/i.test(img.asset_group || img.type || "")
+    ) || imagesArr[0]
+  );
 }
 
 export default function ProductRow({
-  product, checked, onCheck, onViewCertificate, onEditProduct // <--- añadimos el handler de edición
+  product,
+  checked,
+  onCheck,
+  onViewCertificate,
+  onEditProduct,
 }) {
   const imagesArr = Array.isArray(product.images) ? product.images : [];
-  const mainImageObj = imagesArr.length > 0 ? imagesArr[0] : null;
-  const additionalImagesObjs = imagesArr.length > 1 ? imagesArr.slice(1, 3) : [];
+
+  const mainImageObj = pickMainImage(imagesArr);
+  const additionalImagesObjs = imagesArr.filter(img => img !== mainImageObj).slice(0, 2);
 
   const handleImgError = (e) => {
     e.target.onerror = null;
@@ -40,9 +53,6 @@ export default function ProductRow({
     }
   }
 
-  // download icon visible only if approved and has certificate
-  // const canDownloadCertificate = verifyStatus === "approved" && (product.certificate_url || product.qr_base64);
-
   return (
     <tr className="product-row">
       {/* Checkbox */}
@@ -54,6 +64,7 @@ export default function ProductRow({
           aria-label="Select product"
         />
       </td>
+
       {/* Main Image */}
       <td className="product-table-image">
         {mainImageObj ? (
@@ -65,15 +76,21 @@ export default function ProductRow({
             onError={handleImgError}
           />
         ) : (
-          <div className="product-additional-img" style={{ background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            className="product-additional-img"
+            style={{ background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
             <span style={{ color: "#bbb", fontSize: "12px" }}>No Image</span>
           </div>
         )}
       </td>
+
       {/* ID */}
       <td className="product-table-id">{product.id || "-"}</td>
+
       {/* Brand */}
       <td className="product-table-brand">{product.brand_name || "-"}</td>
+
       {/* Additional Images + Add photo */}
       <td className="product-table-additional">
         <div style={{ display: "flex", alignItems: "center" }}>
@@ -87,34 +104,36 @@ export default function ProductRow({
               onError={handleImgError}
             />
           ))}
-          {/* Botón Add photos para EDITAR producto */}
+
           <button
             className="add-photos-btn"
             title="Add photos"
             type="button"
-            onClick={() => onEditProduct(product)} // <--- llamado a editar
+            onClick={() => onEditProduct(product)}
           >
-            <img
-              src={addPhotoIcon}
-              alt="Add photos"
-              draggable="false"
-            />
-            {/* <span>Add photos</span> */}
+            <img src={addPhotoIcon} alt="Add photos" draggable="false" />
           </button>
         </div>
       </td>
+
       {/* Verity Result */}
       <td className="product-table-status">
         <StatusTag status={verifyStatus}>{verifyLabel}</StatusTag>
       </td>
-      {/* Certificate Download SOLO si approved */}
+
+      {/* Certificate */}
       <td className="product-table-certificate">
         {verifyStatus === "approved" && (
           <button
             className="download-btn"
             title="Show certificate"
             style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-            onClick={() => onViewCertificate(product)}
+            onClick={() =>
+              onViewCertificate(
+                product,
+                getImageSrc(mainImageObj) // misma URL que ves en la tabla
+              )
+            }
           >
             <img
               src={downloadIcon}
