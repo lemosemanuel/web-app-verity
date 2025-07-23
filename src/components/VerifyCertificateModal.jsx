@@ -1,5 +1,7 @@
 import React, { useRef } from "react";
 import html2canvas from "html2canvas";
+import authenticSticker from "../assets/authentic.png";
+import verityLogo from "../assets/verity-logo.png";
 import "./VerifyCertificateModal.css";
 
 const NO_IMG =
@@ -7,15 +9,11 @@ const NO_IMG =
 
 const getSrc = (img) => img?.preview || img?.url || "";
 
-/**
- * Envuelve la URL real con nuestro proxy Nginx (/img-proxy),
- * para evitar CORS al hacer html2canvas.
- */
+/** Pasa URL externas por el proxy Nginx */
 const toProxy = (url) => {
   if (!url || url.startsWith("data:")) return url || NO_IMG;
   try {
     const u = new URL(url);
-    // asegúrate que siempre tenga el slash
     return `/img-proxy${u.pathname}${u.search || ""}`;
   } catch {
     return `/img-proxy${url.replace(/^https?:\/\/[^/]+/, "")}`;
@@ -29,27 +27,24 @@ export default function VerifyCertificateModal({
   product,
   mainImageUrl: mainImgFromRow,
 }) {
-  const certificateRef = useRef(null);
+  const ref = useRef(null);
   if (!open) return null;
 
   // -------- Imagen principal --------
   const fallback =
     getSrc(product?.images?.[0]) ||
     getSrc(certificateData?.images?.[0]) ||
-    NO_IMG;
-
+    "";
   const rawImg = mainImgFromRow || fallback;
-  const proxiedImg = toProxy(rawImg);
+  const proxiedImg = rawImg ? toProxy(rawImg) : NO_IMG;
 
+  // -------- Datos --------
   const {
     brand = product?.brand_name || "Brand name",
-    authenticStickerUrl = "https://assets.highend.app/products/1753057243-authent.png",
-    verityLogoUrl = "https://assets.highend.app/products/1753057075-Verity.png",
     date,
     date_of_authentication,
   } = certificateData || {};
 
-  // -------- Fecha --------
   const rawDate = date || date_of_authentication;
   let formattedDate = "";
   if (rawDate) {
@@ -64,16 +59,16 @@ export default function VerifyCertificateModal({
     }
   }
 
-  // -------- Descargar como PNG --------
+  // -------- Descargar PNG --------
   async function handleDownload() {
-    if (!certificateRef.current) return;
+    if (!ref.current) return;
 
-    // Forzamos crossOrigin para html2canvas
-    certificateRef.current.querySelectorAll("img").forEach((img) => {
-      img.setAttribute("crossorigin", "anonymous");
-    });
+    // asegurar CORS
+    ref.current.querySelectorAll("img").forEach((i) =>
+      i.setAttribute("crossorigin", "anonymous")
+    );
 
-    const canvas = await html2canvas(certificateRef.current, {
+    const canvas = await html2canvas(ref.current, {
       useCORS: true,
       allowTaint: false,
       backgroundColor: "#fff",
@@ -91,7 +86,7 @@ export default function VerifyCertificateModal({
 
   return (
     <div className="certificate-modal-overlay">
-      <div className="certificate-card" ref={certificateRef}>
+      <div className="certificate-card" ref={ref}>
         <button className="certificate-close-btn" onClick={onClose}>×</button>
 
         <div className="certificate-content">
@@ -108,11 +103,10 @@ export default function VerifyCertificateModal({
                 onError={(e) => (e.currentTarget.src = NO_IMG)}
               />
               <img
-                src={toProxy(authenticStickerUrl)}
+                src={authenticSticker}
                 alt="authentic"
                 className="certificate-authentic-sticker"
                 draggable={false}
-                crossOrigin="anonymous"
               />
             </div>
 
@@ -127,11 +121,10 @@ export default function VerifyCertificateModal({
               </div>
               <div className="certificate-verity-logo-box">
                 <img
-                  src={toProxy(verityLogoUrl)}
+                  src={verityLogo}
                   alt="Verity AI"
                   className="certificate-verity-logo"
                   draggable={false}
-                  crossOrigin="anonymous"
                 />
               </div>
             </div>
