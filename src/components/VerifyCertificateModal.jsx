@@ -7,14 +7,17 @@ const NO_IMG =
 
 const getSrc = (img) => img?.preview || img?.url || "";
 
+/**
+ * Envuelve la URL real con nuestro proxy Nginx (/img-proxy),
+ * para evitar CORS al hacer html2canvas.
+ */
 const toProxy = (url) => {
   if (!url || url.startsWith("data:")) return url || NO_IMG;
-  // Solo el pathname para que coincida con pathRewrite
   try {
     const u = new URL(url);
-    return `/img-proxy${u.pathname}`;
+    return `/img-proxy${u.pathname}${u.search || ""}`;
   } catch {
-    // si falla el new URL (string raro), lo pasamos entero
+    // fallback si la URL es rara
     return `/img-proxy${url.replace(/^https?:\/\/[^/]+/, "")}`;
   }
 };
@@ -29,7 +32,7 @@ export default function VerifyCertificateModal({
   const certificateRef = useRef(null);
   if (!open) return null;
 
-  // Imagen final (sin base64)
+  // -------- Imagen principal --------
   const fallback =
     getSrc(product?.images?.[0]) ||
     getSrc(certificateData?.images?.[0]) ||
@@ -46,6 +49,7 @@ export default function VerifyCertificateModal({
     date_of_authentication,
   } = certificateData || {};
 
+  // -------- Fecha --------
   const rawDate = date || date_of_authentication;
   let formattedDate = "";
   if (rawDate) {
@@ -60,10 +64,11 @@ export default function VerifyCertificateModal({
     }
   }
 
+  // -------- Descargar como PNG --------
   async function handleDownload() {
     if (!certificateRef.current) return;
 
-    // aseguramos crossOrigin en todas las imgs
+    // Forzamos crossOrigin para html2canvas
     certificateRef.current.querySelectorAll("img").forEach((img) => {
       img.setAttribute("crossorigin", "anonymous");
     });
