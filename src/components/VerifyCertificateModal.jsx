@@ -15,9 +15,9 @@ const toProxy = (url) => {
   if (!url || url.startsWith("data:")) return url || NO_IMG;
   try {
     const u = new URL(url);
+    // asegúrate que siempre tenga el slash
     return `/img-proxy${u.pathname}${u.search || ""}`;
   } catch {
-    // fallback si la URL es rara
     return `/img-proxy${url.replace(/^https?:\/\/[^/]+/, "")}`;
   }
 };
