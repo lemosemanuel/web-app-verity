@@ -1,21 +1,12 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import { toLocalBlobUrl } from "../utils/toLocalBlobUrl";
 import "./VerifyCertificateModal.css";
 
 const NO_IMG =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0nMzAwJyBoZWlnaHQ9JzMwMCcgeG1sbnM9J2h0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnJz48cmVjdCB3aWR0aD0nMzAwJyBoZWlnaHQ9JzMwMCcgZmlsbD0nI2Y1ZjVmNScvPjx0ZXh0IHg9JzUwJScgeT0nNTAlJyBkeT0nLjMnIGZvbnQtc2l6ZT0nMjAnIGZpbGw9JyNiYmInPk5vIEltZzwvdGV4dD48L3N2Zz4=";
 
 const getSrc = (img) => img?.preview || img?.url || "";
-
-const toProxy = (url) => {
-  if (!url || url.startsWith("data:")) return url || NO_IMG;
-  try {
-    const u = new URL(url);
-    return `/img-proxy${u.pathname}${u.search || ""}`;
-  } catch {
-    return `/img-proxy${url.replace(/^https?:\/\/[^/]+/, "")}`;
-  }
-};
 
 export default function VerifyCertificateModal({
   open,
@@ -25,15 +16,37 @@ export default function VerifyCertificateModal({
   mainImageUrl: mainImgFromRow,
 }) {
   const ref = useRef(null);
+  const [imgMain, setImgMain] = useState("");
+  const [ready, setReady] = useState(false);
+
+  // logos locales (MISMO ORIGIN)
+  const authenticStickerUrl = "/assets/authentic.png";
+  const verityLogoUrl = "/assets/verity-logo.png";
+
+  useEffect(() => {
+    if (!open) return;
+    const fallback =
+      getSrc(product?.images?.[0]) ||
+      getSrc(certificateData?.images?.[0]) ||
+      "";
+    const raw = mainImgFromRow || fallback;
+
+    (async () => {
+      if (!raw) {
+        setImgMain(NO_IMG);
+        setReady(true);
+        return;
+      }
+      // intentamos blobUrl para evitar CORS/taint
+      const blobUrl = await toLocalBlobUrl(raw);
+      setImgMain(blobUrl || raw);
+      setReady(true);
+    })();
+
+    return () => setReady(false);
+  }, [open, product, certificateData, mainImgFromRow]);
+
   if (!open) return null;
-
-  // Imagen principal
-  const fallback = getSrc(product?.images?.[0]) || getSrc(certificateData?.images?.[0]) || "";
-  const proxiedMain = fallback || mainImgFromRow ? toProxy(mainImgFromRow || fallback) : NO_IMG;
-
-  // Logos remotos
-  const authenticStickerUrl = toProxy("https://assets.highend.app/products/1753057243-authent.png");
-  const verityLogoUrl        = toProxy("https://assets.highend.app/products/1753057075-Verity.png");
 
   const {
     brand = product?.brand_name || "Brand name",
@@ -57,13 +70,14 @@ export default function VerifyCertificateModal({
 
   async function handleDownload() {
     if (!ref.current) return;
+
+    // Aseguramos crossOrigin en imgs locales (no hace daño)
     ref.current.querySelectorAll("img").forEach((i) =>
       i.setAttribute("crossorigin", "anonymous")
     );
 
     const canvas = await html2canvas(ref.current, {
       useCORS: true,
-      allowTaint: false,
       backgroundColor: "#fff",
       scale: window.devicePixelRatio || 2,
       logging: false,
@@ -87,14 +101,21 @@ export default function VerifyCertificateModal({
 
           <div className="certificate-row">
             <div className="certificate-img-box">
-              <img
-                src={proxiedMain}
-                alt="product"
-                className="certificate-img-main"
-                draggable={false}
-                crossOrigin="anonymous"
-                onError={(e) => (e.currentTarget.src = NO_IMG)}
-              />
+              {ready ? (
+                <img
+                  src={imgMain || NO_IMG}
+                  alt="product"
+                  className="certificate-img-main"
+                  draggable={false}
+                  crossOrigin="anonymous"
+                  onError={(e) => (e.currentTarget.src = NO_IMG)}
+                />
+              ) : (
+                <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:"#aaa"}}>
+                  Loading...
+                </div>
+              )}
+
               <img
                 src={authenticStickerUrl}
                 alt="authentic"
@@ -140,8 +161,8 @@ export default function VerifyCertificateModal({
             VerityAI is not affiliated with any of the brands authenticated...
           </div>
 
-          <button className="certificate-download-btn" onClick={handleDownload}>
-            <span role="img" aria-label="download">⬇️</span> Download Certificate
+          <button className="certificate-download-btn" onClick={handleDownload} disabled={!ready}>
+            ⬇️ Download Certificate
           </button>
         </div>
       </div>
