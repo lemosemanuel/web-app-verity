@@ -7,7 +7,6 @@ const NO_IMG =
 
 const getSrc = (img) => img?.preview || img?.url || "";
 
-// Envuelve URL externa en /img-proxy
 const toProxy = (url) => {
   if (!url || url.startsWith("data:")) return url || NO_IMG;
   try {
@@ -28,19 +27,14 @@ export default function VerifyCertificateModal({
   const ref = useRef(null);
   if (!open) return null;
 
-  // -------- Imagen principal --------
-  const fallback =
-    getSrc(product?.images?.[0]) ||
-    getSrc(certificateData?.images?.[0]) ||
-    "";
-  const rawImg = mainImgFromRow || fallback;
-  const proxiedImg = rawImg ? toProxy(rawImg) : NO_IMG;
+  // Imagen principal
+  const fallback = getSrc(product?.images?.[0]) || getSrc(certificateData?.images?.[0]) || "";
+  const proxiedMain = fallback || mainImgFromRow ? toProxy(mainImgFromRow || fallback) : NO_IMG;
 
-  // Logos remotos (también por proxy)
+  // Logos remotos
   const authenticStickerUrl = toProxy("https://assets.highend.app/products/1753057243-authent.png");
-  const verityLogoUrl      = toProxy("https://assets.highend.app/products/1753057075-Verity.png");
+  const verityLogoUrl        = toProxy("https://assets.highend.app/products/1753057075-Verity.png");
 
-  // -------- Datos --------
   const {
     brand = product?.brand_name || "Brand name",
     date,
@@ -63,7 +57,6 @@ export default function VerifyCertificateModal({
 
   async function handleDownload() {
     if (!ref.current) return;
-
     ref.current.querySelectorAll("img").forEach((i) =>
       i.setAttribute("crossorigin", "anonymous")
     );
@@ -95,7 +88,7 @@ export default function VerifyCertificateModal({
           <div className="certificate-row">
             <div className="certificate-img-box">
               <img
-                src={proxiedImg}
+                src={proxiedMain}
                 alt="product"
                 className="certificate-img-main"
                 draggable={false}
@@ -108,6 +101,7 @@ export default function VerifyCertificateModal({
                 className="certificate-authentic-sticker"
                 draggable={false}
                 crossOrigin="anonymous"
+                onError={(e) => (e.currentTarget.style.display = "none")}
               />
             </div>
 
@@ -127,6 +121,7 @@ export default function VerifyCertificateModal({
                   className="certificate-verity-logo"
                   draggable={false}
                   crossOrigin="anonymous"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
                 />
               </div>
             </div>
