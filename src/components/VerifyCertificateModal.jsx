@@ -1,7 +1,5 @@
 import React, { useRef } from "react";
 import html2canvas from "html2canvas";
-import authenticSticker from "../assets/authentic.png";
-import verityLogo from "../assets/verity-logo.png";
 import "./VerifyCertificateModal.css";
 
 const NO_IMG =
@@ -9,7 +7,7 @@ const NO_IMG =
 
 const getSrc = (img) => img?.preview || img?.url || "";
 
-/** Pasa URL externas por el proxy Nginx */
+// Envuelve URL externa en /img-proxy
 const toProxy = (url) => {
   if (!url || url.startsWith("data:")) return url || NO_IMG;
   try {
@@ -38,6 +36,10 @@ export default function VerifyCertificateModal({
   const rawImg = mainImgFromRow || fallback;
   const proxiedImg = rawImg ? toProxy(rawImg) : NO_IMG;
 
+  // Logos remotos (también por proxy)
+  const authenticStickerUrl = toProxy("https://assets.highend.app/products/1753057243-authent.png");
+  const verityLogoUrl      = toProxy("https://assets.highend.app/products/1753057075-Verity.png");
+
   // -------- Datos --------
   const {
     brand = product?.brand_name || "Brand name",
@@ -59,11 +61,9 @@ export default function VerifyCertificateModal({
     }
   }
 
-  // -------- Descargar PNG --------
   async function handleDownload() {
     if (!ref.current) return;
 
-    // asegurar CORS
     ref.current.querySelectorAll("img").forEach((i) =>
       i.setAttribute("crossorigin", "anonymous")
     );
@@ -103,10 +103,11 @@ export default function VerifyCertificateModal({
                 onError={(e) => (e.currentTarget.src = NO_IMG)}
               />
               <img
-                src={authenticSticker}
+                src={authenticStickerUrl}
                 alt="authentic"
                 className="certificate-authentic-sticker"
                 draggable={false}
+                crossOrigin="anonymous"
               />
             </div>
 
@@ -121,10 +122,11 @@ export default function VerifyCertificateModal({
               </div>
               <div className="certificate-verity-logo-box">
                 <img
-                  src={verityLogo}
+                  src={verityLogoUrl}
                   alt="Verity AI"
                   className="certificate-verity-logo"
                   draggable={false}
+                  crossOrigin="anonymous"
                 />
               </div>
             </div>
