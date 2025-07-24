@@ -4,6 +4,7 @@ import ScannerModal from "./ScannerModal";
 import VerifyCertificateModal from "./VerifyCertificateModal";
 import ErrorModal from "./ErrorModal";
 import "./AddProductModal.css";
+import { ENDPOINTS } from './urls';
 
 const FIXED_ASSET_GROUPS = [
   { id: 1, name: "Main photo",      is_required: true },
@@ -35,11 +36,13 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
   // --- Catálogos (brands, categories) ---
   useEffect(() => {
     if (!open) return;
-    fetch("https://python-services.stage.highend.app/api/brands")
-      .then((r) => r.json())
+
+    fetch(ENDPOINTS.brands)
+      .then(r => r.json())
       .then(setBrands);
-    fetch("https://python-services.stage.highend.app/api/categories")
-      .then((r) => r.json())
+
+    fetch(ENDPOINTS.categories)
+      .then(r => r.json())
       .then(setCategories);
   }, [open]);
 
@@ -226,7 +229,7 @@ export default function AddProductModal({ open, onClose, onProductCreated, produ
     try {
       // 1) Autenticación
       const verityRes = await fetch(
-        "https://python-services.stage.highend.app/authentication/authentication",
+        ENDPOINTS.authentication.authenticate,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
