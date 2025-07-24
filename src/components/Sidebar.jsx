@@ -1,14 +1,13 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-// import "./Sidebar.css"; // Opcional
+import "./Sidebar.css";
 
 export default function Sidebar() {
   return (
     <aside className="sidebar">
-      <div className="title">
-        VERITY <span className="subtitle">AI</span>
+      <div className="logo-box">
+        <img src="/assets/logoVerity.png" alt="Verity AI" className="logo" />
       </div>
-      <div className="subtitle">powered by HIGH END</div>
       <nav>
         <ul>
           <li>
@@ -21,21 +20,7 @@ export default function Sidebar() {
               Products
             </NavLink>
           </li>
-          <li>
-            <NavLink to="/faqs" className={({ isActive }) => isActive ? "selected" : ""}>
-              FAQs
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/support" className={({ isActive }) => isActive ? "selected" : ""}>
-              Support
-            </NavLink>
-          </li>
-          <li>
-            <NavLink to="/settings" className={({ isActive }) => isActive ? "selected" : ""}>
-              Settings
-            </NavLink>
-          </li>
+        
         </ul>
       </nav>
     </aside>
