@@ -1,9 +1,11 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
+// import Header from "./components/Header";
 import ProductTable from "./components/ProductTable";
 import Dashboard from "./components/Dashboard";
+import HomePage from "./components/HomePage";
+import BusinessBetaSignup from "./components/BusinessBetaSignup";
 import "./App.css";
 
 function App() {
@@ -13,10 +15,13 @@ function App() {
         <Sidebar />
         <main style={{ flex: 1, padding: "40px" }}>
           <Routes>
-            {/* No Header en Dashboard */}
+            {/* HomePage */}
+            <Route path="/home" element={<HomePage />} />
+
+            {/* Dashboard sin Header */}
             <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Sí Header en estas páginas */}
+            {/* Products con ProductTable */}
             <Route
               path="/products"
               element={
@@ -26,35 +31,22 @@ function App() {
                 </>
               }
             />
-            <Route
-              path="/faqs"
-              element={
-                <>
-                  <Header />
-                  <div>FAQs page</div>
-                </>
-              }
-            />
-            <Route
-              path="/support"
-              element={
-                <>
-                  <Header />
-                  <div>Support page</div>
-                </>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <>
-                  <Header />
-                  <div>Settings page</div>
-                </>
-              }
-            />
-            {/* Redirección raíz */}
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+
+           {/* Business Beta Sign‑up */}
+           <Route
+             path="/beta-signup"
+             element={
+               <>
+                 {/* aquí podrías añadir <Header /> si lo necesitas */}
+                 <BusinessBetaSignup />
+               </>
+             }
+           />
+
+            {/* …tus otras rutas (faqs, support, settings, etc.) */}
+
+            {/* Redirección raíz a HomePage */}
+            <Route path="/" element={<Navigate to="/home" replace />} />
           </Routes>
         </main>
       </div>
