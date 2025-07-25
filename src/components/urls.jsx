@@ -1,6 +1,6 @@
 // src/components/nuevaUrl.jsx
-// export const API_BASE = 'https://python-services.stage.highend.app';
-export const API_BASE = 'http://172.20.10.3:80';
+export const API_BASE = 'https://python-services.stage.highend.app';
+// export const API_BASE = 'http://172.20.10.3:80';
 
 export const ENDPOINTS = {
   brands:       `${API_BASE}/api/brands`,
