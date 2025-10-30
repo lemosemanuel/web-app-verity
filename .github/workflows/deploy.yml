@@ -12,17 +12,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine frontend path
+        id: frontend
+        run: |
+          if [ -f package.json ]; then
+            FRONTEND_PATH="."
+          elif [ -f web-app-verity/package.json ]; then
+            FRONTEND_PATH="web-app-verity"
+          else
+            echo "❌ package.json not found" >&2
+            exit 1
+          fi
+          echo "path=$FRONTEND_PATH" >> $GITHUB_OUTPUT
+          if [ -f "$FRONTEND_PATH/Dockerfile" ]; then
+            echo "dockerfile=$FRONTEND_PATH/Dockerfile" >> $GITHUB_OUTPUT
+            echo "context=$FRONTEND_PATH" >> $GITHUB_OUTPUT
+          else
+            echo "dockerfile=Dockerfile" >> $GITHUB_OUTPUT
+            echo "context=." >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install dependencies
-        working-directory: web-app-verity
+        working-directory: ${{ steps.frontend.outputs.path }}
         run: npm ci
 
       - name: Build React app
-        working-directory: web-app-verity
+        working-directory: ${{ steps.frontend.outputs.path }}
         env:
           REACT_APP_API_BASE_URL: http://python-services.stage.highend.app/
         run: npm run build
@@ -47,6 +67,6 @@ jobs:
           ECR_REGISTRY: 969288724771.dkr.ecr.ap-southeast-2.amazonaws.com
           ECR_REPOSITORY: verity-web
         run: |
-          docker build -t verity-web -f web-app-verity/Dockerfile web-app-verity
+          docker build -t verity-web -f ${{ steps.frontend.outputs.dockerfile }} ${{ steps.frontend.outputs.context }}
           docker tag verity-web:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
