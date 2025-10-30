@@ -3,7 +3,6 @@ import ProductRow from "./ProductRow";
 import Pagination from "./Pagination";
 import AddProductModal from "./AddProductModal";
 import VerifyCertificateModal from "./VerifyCertificateModal";
-import { ENDPOINTS } from "./urls";
 
 export default function ProductTable() {
   const [products, setProducts] = useState([]);
@@ -33,18 +32,16 @@ export default function ProductTable() {
   const getImageSrc = (imgObj) => imgObj?.preview || imgObj?.url || "";
 
   // Load products
-  const loadProducts = () => {
+  function loadProducts() {
     setLoading(true);
-    fetch(ENDPOINTS.products.webapp)
-      .then(res => res.json())
-      .then(data => {
+    fetch("https://python-services.stage.highend.app/api/webapp_products")
+      .then((res) => res.json())
+      .then((data) => {
         setProducts(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
-
-  // Al montar el componente, cargar productos
+  }
   useEffect(() => {
     loadProducts();
   }, []);

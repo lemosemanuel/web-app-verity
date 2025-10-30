@@ -18,9 +18,13 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
+        working-directory: web-app-verity
         run: npm ci
 
       - name: Build React app
+        working-directory: web-app-verity
+        env:
+          REACT_APP_API_BASE_URL: http://python-services.stage.highend.app/
         run: npm run build
 
       - name: Set up Docker Buildx
@@ -43,6 +47,6 @@ jobs:
           ECR_REGISTRY: 969288724771.dkr.ecr.ap-southeast-2.amazonaws.com
           ECR_REPOSITORY: verity-web
         run: |
-          docker build -t verity-web .
+          docker build -t verity-web -f web-app-verity/Dockerfile web-app-verity
           docker tag verity-web:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest

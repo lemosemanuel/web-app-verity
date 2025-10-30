@@ -3,8 +3,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area
 } from "recharts";
 import "./Dashboard.css";
-import { ENDPOINTS } from './urls';
-
 
 const GREEN = "#D1FF5C";
 const BLUE = "#90B6F2";
@@ -12,7 +10,7 @@ const PURPLE = "#B6A7F5";
 const BLACK = "#111";
 
 // Si usás variables de entorno (.env), poné REACT_APP_API_URL=http://localhost:5000/api
-// const API = "https://python-services.stage.highend.app/api";
+const API = "https://python-services.stage.highend.app/api";
 
 export default function Dashboard() {
   const [kpis, setKpis] = useState({});
@@ -20,18 +18,11 @@ export default function Dashboard() {
   const [hours, setHours] = useState([]);
   const [auths, setAuths] = useState([]);
 
-    useEffect(() => {
-    fetch(ENDPOINTS.dashboard.kpis)
-      .then(r => r.json()).then(setKpis);
-
-    fetch(ENDPOINTS.dashboard.operationalUplift)
-      .then(r => r.json()).then(setUplift);
-
-    fetch(ENDPOINTS.dashboard.hoursSaved)
-      .then(r => r.json()).then(setHours);
-
-    fetch(ENDPOINTS.dashboard.authentications)
-      .then(r => r.json()).then(setAuths);
+  useEffect(() => {
+    fetch(`${API}/dashboard/kpis`).then(r => r.json()).then(setKpis);
+    fetch(`${API}/dashboard/operational_uplift`).then(r => r.json()).then(setUplift);
+    fetch(`${API}/dashboard/hours_saved`).then(r => r.json()).then(setHours);
+    fetch(`${API}/dashboard/authentications`).then(r => r.json()).then(setAuths);
   }, []);
 
   return (
@@ -103,7 +94,7 @@ export default function Dashboard() {
       </div>
       <div className="dashboard-charts-row">
         <div className="dashboard-chart-box">
-          <h4>Sales uplift from Verity AI</h4>
+          <h4>Number of authentications</h4>
           <ResponsiveContainer width="100%" height={120}>
             <AreaChart data={auths}>
               <defs>
@@ -120,7 +111,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
         <div className="dashboard-chart-box">
-          <h4>Sales uplift from Verity AI</h4>
+          <h4>Number of authentications</h4>
           <ResponsiveContainer width="100%" height={120}>
             <AreaChart data={auths}>
               <defs>
