@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom";
 import "./Test.css";
 
-const API = process.env.REACT_APP_API_BASE_URL || "http://localhost:80";
-const CATALOG_API = process.env.REACT_APP_CATALOG_API || "https://python-services.stage.highend.app";
+const API = "https://python-services.stage.highend.app";
+const CATALOG_API = "https://python-services.stage.highend.app";
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024; // 8 MB
 
 export default function Test({ token, onLogout }) {

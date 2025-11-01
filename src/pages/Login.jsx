@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
-const API = process.env.REACT_APP_API_BASE_URL || "http://localhost:80";
+const API = process.env.REACT_APP_API_BASE_URL || "https://python-services.stage.highend.app";
 
 export default function Login({ onAuthenticated }) {
   const navigate = useNavigate();
