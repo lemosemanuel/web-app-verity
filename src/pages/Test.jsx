@@ -20,8 +20,6 @@ export default function Test({ token, onLogout }) {
   const [form, setForm] = useState({
     brandId: "",
     categoryId: "",
-    notes: "",
-    referenceUrl: "",
   });
   const [images, setImages] = useState({});
   const fileInputsRef = useRef({});
@@ -155,11 +153,6 @@ export default function Test({ token, onLogout }) {
     setImages({});
   };
 
-  const handleNotesChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
   const handleFileSelection = (assetGroupKey, file) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -227,11 +220,18 @@ export default function Test({ token, onLogout }) {
     return !images[key];
   });
 
+  const totalImages = Object.keys(images).length;
+  const meetsMinimumImages = assetGroups.length === 0 || totalImages >= 6;
+
   const canSubmit =
-    !!token && !!form.brandId && !!form.categoryId && !missingRequired && (assetGroups.length === 0 || Object.keys(images).length > 0);
+    !!token && !!form.brandId && !!form.categoryId && !missingRequired && (assetGroups.length === 0 || totalImages > 0);
 
   const runTest = async () => {
     if (!canSubmit || loading) return;
+    if (!meetsMinimumImages) {
+      window.alert("Minimum 6 images required.");
+      return;
+    }
     setStatusMessage(null);
     setLoading(true);
     setResult(null);
@@ -243,8 +243,6 @@ export default function Test({ token, onLogout }) {
       const payload = {
         brand_id: form.brandId,
         category_id: form.categoryId,
-        notes: form.notes || undefined,
-        reference_url: form.referenceUrl || undefined,
         brand_name: brands.find((b) => String(b.id) === String(form.brandId))?.name,
         category_name:
           categories.find((c) => String(c.id) === String(form.categoryId))?.title ||
@@ -396,33 +394,6 @@ export default function Test({ token, onLogout }) {
               })}
             </select>
           </div>
-          <div className="test-form__group">
-            <label className="test-form__label" htmlFor="reference-url">
-              Reference URL (optional)
-            </label>
-            <input
-              id="reference-url"
-              name="referenceUrl"
-              type="url"
-              placeholder="https://brand.com/product"
-              className="test-form__select"
-              value={form.referenceUrl}
-              onChange={handleNotesChange}
-            />
-          </div>
-          <div className="test-form__group">
-            <label className="test-form__label" htmlFor="notes-field">
-              Notes for the Verity team (optional)
-            </label>
-            <textarea
-              id="notes-field"
-              name="notes"
-              className="test-form__textarea"
-              placeholder="Add any context we should consider for this verification."
-              value={form.notes}
-              onChange={handleNotesChange}
-            />
-          </div>
           <div className="test-action-bar">
             <button
               type="button"
@@ -513,6 +484,9 @@ export default function Test({ token, onLogout }) {
             {missingRequired && (
               <span className="test-hint">Please upload all required assets before running the verification.</span>
             )}
+            {!meetsMinimumImages && assetGroups.length > 0 && !missingRequired && (
+              <span className="test-hint">Upload at least 6 images to run the verification.</span>
+            )}
           </section>
           <section className={`test-result ${result ? "" : "test-result--empty"}`}>
             {result ? (
@@ -563,18 +537,66 @@ export default function Test({ token, onLogout }) {
                 <div className="test-insight-grid">
                   {imageInsights.map((image) => {
                     const assetName = assetGroupByUrl[image.url] || "Asset";
-                    const prediction = image.predictions || "Not evaluated";
                     const remark = image.remarks || "";
                     const detectionConfidence = image.detection_confidence || {};
                     const brandConfidence = detectionConfidence.brandlabel;
                     const careConfidence = detectionConfidence.carelabel;
+                    const displayPrediction = "Tested - Image Verified";
+                    const predictionText = String(image.predictions || "");
+                    const loweredPrediction = predictionText.toLowerCase();
+                    const isRejected =
+                      loweredPrediction.includes("reject") ||
+                      loweredPrediction.includes("counterfeit") ||
+                      loweredPrediction.includes("not verified");
+                    const labelFallback = "No verifiable labels detected in this image";
+                    const formatLabelValue = (value) => {
+                      if (value === null || value === undefined) {
+                        return labelFallback;
+                      }
+                      if (typeof value === "number") {
+                        return value > 0 ? value : labelFallback;
+                      }
+                      const trimmed = String(value).trim();
+                      if (!trimmed) {
+                        return labelFallback;
+                      }
+                      const lowered = trimmed.toLowerCase();
+                      if (
+                        lowered.includes("no metadata found") ||
+                        lowered.includes("no verifiable labels") ||
+                        lowered === "not verified"
+                      ) {
+                        return labelFallback;
+                      }
+                      const numericValue = Number(trimmed);
+                      if (!Number.isNaN(numericValue)) {
+                        return numericValue > 0 ? trimmed : labelFallback;
+                      }
+                      return lowered.includes(labelFallback.toLowerCase()) ? labelFallback : trimmed;
+                    };
+                    const brandDisplay = formatLabelValue(brandConfidence);
+                    const careDisplay = formatLabelValue(careConfidence);
+                    const labelIssue = brandDisplay === labelFallback || careDisplay === labelFallback;
+                    let normalizedRemark = (remark || "").trim();
+                    if (!normalizedRemark) {
+                      normalizedRemark = "";
+                    }
+                    if (labelIssue) {
+                      normalizedRemark = labelFallback;
+                    } else if (isRejected) {
+                      normalizedRemark = "Product rejected, all images couldn't be verified";
+                    } else if (normalizedRemark === "No camera metadata found. No verifiable labels detected in this image.") {
+                      normalizedRemark = labelFallback;
+                    } else if (normalizedRemark === "No verifiable labels detected in this image.") {
+                      normalizedRemark = labelFallback;
+                    }
                     return (
                       <article className="test-insight-card" key={image.url}>
                         <header className="test-insight-card__header">
                           <div>
                             <h5>{assetName}</h5>
-                            <span className={`status-pill status-pill--${prediction.toLowerCase().includes("counterfeit") ? "rejected" : prediction.toLowerCase().includes("verified") ? "approved" : "pending"}`}>
-                              {prediction}
+                            <span className="status-pill status-pill--pending">
+                              {displayPrediction}
                             </span>
                           </div>
                           <a href={image.url} target="_blank" rel="noreferrer" className="test-insight-card__link">
@@ -582,15 +604,17 @@ export default function Test({ token, onLogout }) {
                           </a>
                         </header>
                         <div className="test-insight-card__body">
-                          <p className="test-insight-card__remarks">{remark || "No remarks returned for this asset."}</p>
+                          <p className="test-insight-card__remarks">
+                            {normalizedRemark || "No remarks returned for this asset."}
+                          </p>
                           <div className="test-insight-card__metrics">
                             <div>
                               <span className="test-meta__label">Brand label</span>
-                              <span className="test-meta__value">{brandConfidence || "—"}</span>
+                              <span className="test-meta__value">{brandDisplay}</span>
                             </div>
                             <div>
                               <span className="test-meta__label">Care label</span>
-                              <span className="test-meta__value">{careConfidence || "—"}</span>
+                              <span className="test-meta__value">{careDisplay}</span>
                             </div>
                           </div>
                           {image.spell_check_performed_carelabel && (
